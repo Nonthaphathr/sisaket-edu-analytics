@@ -1,0 +1,277 @@
+/**
+ * Sisaket PAO Education Analytics System
+ * ระบบสารสนเทศวิเคราะห์ผลสัมฤทธิ์ทางการเรียนและผลการทดสอบระดับชาติ (O-NET)
+ * ของโรงเรียนในสังกัด อบจ.ศรีสะเกษ
+ *
+ * ออกแบบระบบโดย ดร.ปิยะพันธ์ พิชญ์ประเสริฐ
+ * พัฒนาระบบโดย นนทพัทธ์ หิรัญเรือง
+ */
+const APP_VERSION = '1.0.0';
+const APP_NAME = 'Sisaket PAO Education Analytics System';
+const CREDIT_DESIGN = 'ออกแบบระบบโดย ดร.ปิยะพันธ์ พิชญ์ประเสริฐ';
+const CREDIT_DEV = 'พัฒนาระบบโดย นนทพัทธ์ หิรัญเรือง';
+// ศูนย์อัปเดต (GitHub Pages) — ประกอบด้วย join กันตัวแปลง URL
+const UPD_BASE = ['https:', '', 'nonthaphathr.github.io', 'sisaket-edu-analytics', ''].join('/');
+
+const SHEET = 'data';              // คอลัมน์: coll | id | json
+const PIN_SHEET = 'pins';          // คอลัมน์: รหัสโรงเรียน | แฮช PIN (ไม่ส่งไปฝั่งผู้ใช้)
+const ROOT_FOLDER_ID = '';         // โฟลเดอร์ Drive หลัก (ว่าง = สร้างให้)
+const SCHOOL_COLLS = ['onet', 'acad']; // คอลเล็กชันที่ PIN โรงเรียนเขียนได้ (เฉพาะรหัสโรงเรียนตนเอง)
+
+/* ---------- เปิดหน้าเว็บ + ฝังข้อมูล (boot data injection) ---------- */
+function doGet(e) {
+  const t = HtmlService.createTemplateFromFile('index');
+  t.boot = JSON.stringify({
+    data: readAll_(),
+    url: ScriptApp.getService().getUrl(),
+    version: APP_VERSION,
+    pinReady: !!PropertiesService.getScriptProperties().getProperty('ADMIN_PIN')
+  }).replace(/</g, '\\u003c');
+  return t.evaluate()
+    .setTitle('ระบบวิเคราะห์ผลสัมฤทธิ์และ O-NET อบจ.ศรีสะเกษ')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+function sh_() {
+  const ss = SpreadsheetApp.getActive();
+  let s = ss.getSheetByName(SHEET);
+  if (!s) { s = ss.insertSheet(SHEET); s.getRange('A:B').setNumberFormat('@'); }
+  return s;
+}
+function pinSh_() {
+  const ss = SpreadsheetApp.getActive();
+  let s = ss.getSheetByName(PIN_SHEET);
+  if (!s) { s = ss.insertSheet(PIN_SHEET); s.getRange('A:B').setNumberFormat('@'); s.hideSheet(); }
+  return s;
+}
+// อ่านทั้งชีตครั้งเดียว
+function readAll_() {
+  const s = sh_(), last = s.getLastRow(), out = {};
+  if (last < 1) return out;
+  s.getRange(1, 1, last, 3).getValues().forEach(r => {
+    if (!r[0]) return;
+    (out[r[0]] = out[r[0]] || {})[r[1]] = JSON.parse(r[2] || '{}');
+  });
+  return out;
+}
+
+/* ---------- สิทธิ์ผู้ใช้: ผู้ดูแล (ศน.) = ADMIN_PIN, โรงเรียน = PIN ของโรงเรียนนั้น ---------- */
+function hash_(pin) {
+  const b = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, 'pao-onet|' + String(pin));
+  return b.map(x => ('0' + (x & 0xff).toString(16)).slice(-2)).join('');
+}
+function auth_(authJson) {
+  let a = {};
+  try { a = typeof authJson === 'string' ? JSON.parse(authJson) : (authJson || {}); } catch (e) { a = {}; }
+  const c = CacheService.getScriptCache(), k = 'pinfail';
+  const fails = +(c.get(k) || 0);
+  if (fails >= 6) throw new Error('PIN_LOCKED: ลองผิดหลายครั้ง กรุณารอ 5 นาที');
+  const props = PropertiesService.getScriptProperties();
+  const admin = props.getProperty('ADMIN_PIN');
+  if (!admin) throw new Error('NO_PIN: ยังไม่ได้ตั้ง PIN ผู้ดูแล — ให้เจ้าของโปรเจกต์รันฟังก์ชัน authorizeOnce ใน Apps Script ก่อน');
+  const pin = String(a.pin || '');
+  if (pin && pin === admin) return { role: 'admin', sch: '' };
+  if (a.sch) {
+    const s = pinSh_(), last = s.getLastRow();
+    if (last > 0) {
+      const rows = s.getRange(1, 1, last, 2).getValues();
+      for (let i = 0; i < rows.length; i++) {
+        if (String(rows[i][0]) === String(a.sch) && rows[i][1] === hash_(pin)) return { role: 'school', sch: String(a.sch) };
+      }
+    }
+  }
+  c.put(k, String(fails + 1), 300);
+  throw new Error('PIN_INVALID: PIN ไม่ถูกต้อง');
+}
+function guard_(a, o) {
+  if (a.role === 'admin') return;
+  const id = String(o.id || '');
+  if (SCHOOL_COLLS.indexOf(o.c) >= 0 && id.split('|')[0] === a.sch) return;
+  if (o.c === 'schools' && id === a.sch && o.op === 'merge') {
+    const ok = ['name', 'size', 'loc', 'students', 'teachers', 'levels'];
+    Object.keys(o.data || {}).forEach(k => { if (ok.indexOf(k) < 0) throw new Error('NOT_ALLOWED: โรงเรียนแก้ไขได้เฉพาะข้อมูลพื้นฐานของตนเอง'); });
+    return;
+  }
+  throw new Error('NOT_ALLOWED: บัญชีโรงเรียนบันทึกได้เฉพาะข้อมูลของโรงเรียนตนเอง');
+}
+function apiLogin(authJson) {
+  const a = auth_(authJson);
+  return JSON.stringify({ ok: true, role: a.role, sch: a.sch });
+}
+
+/* ---------- เขียนข้อมูลเป็นชุด (ops) ครั้งเดียว ---------- */
+// ops = [{op:'set'|'merge'|'delete', c, id, data}]
+function apiCommit(authJson, opsJson) {
+  const a = auth_(authJson);
+  const ops = JSON.parse(opsJson);
+  ops.forEach(o => guard_(a, o));
+  const lock = LockService.getScriptLock(); lock.waitLock(25000);
+  try {
+    const s = sh_(), last = s.getLastRow();
+    const v = last > 0 ? s.getRange(1, 1, last, 3).getValues() : [];
+    const idx = {}; v.forEach((r, i) => { if (r[0]) idx[r[0] + '|' + r[1]] = i; });
+    const dirty = {};
+    ops.forEach(o => {
+      const k = o.c + '|' + o.id, i = idx[k];
+      if (o.op === 'delete') { if (i != null) { v[i] = ['', '', '']; dirty[i] = 1; delete idx[k]; } return; }
+      const old = (i != null && o.op === 'merge') ? JSON.parse(v[i][2] || '{}') : {};
+      const json = JSON.stringify(deepMerge_(old, o.data || {}));
+      if (json.length > 49000) throw new Error('ข้อมูลเกิน 50,000 ตัวอักษร/เซลล์ (' + k + ')');
+      if (i != null) { v[i] = [o.c, String(o.id), json]; dirty[i] = 1; }
+      else { idx[k] = v.length; dirty[v.length] = 1; v.push([o.c, String(o.id), json]); }
+    });
+    const di = Object.keys(dirty).map(Number).sort((x, y) => x - y);
+    if (di.length > 80 || di.length > v.length * 0.4) {
+      const rows = v.filter(r => r[0]);
+      s.clearContents();
+      if (rows.length) s.getRange(1, 1, rows.length, 3).setValues(rows);
+    } else {
+      let st = 0;
+      while (st < di.length) {
+        let en = st; while (en + 1 < di.length && di[en + 1] === di[en] + 1) en++;
+        const r0 = di[st], r1 = di[en];
+        s.getRange(r0 + 1, 1, r1 - r0 + 1, 3).setValues(v.slice(r0, r1 + 1));
+        st = en + 1;
+      }
+    }
+    return JSON.stringify({ ok: true, n: ops.length });
+  } finally { lock.releaseLock(); }
+}
+// merge ระดับ 1 ชั้นลึก: คีย์ที่เป็นออบเจ็กต์ (เช่น subj.lv) รวมเข้าด้วยกัน ที่เหลือเขียนทับ
+function deepMerge_(a, b) {
+  const out = Object.assign({}, a);
+  Object.keys(b).forEach(k => {
+    const x = out[k], y = b[k];
+    if (y && typeof y === 'object' && !Array.isArray(y) && x && typeof x === 'object' && !Array.isArray(x)) out[k] = deepMerge_(x, y);
+    else out[k] = y;
+  });
+  return out;
+}
+
+/* ---------- ตั้ง PIN ---------- */
+// payload: {adminPin?, schoolCode?, schoolPin?}
+function apiSetPins(authJson, payloadJson) {
+  const a = auth_(authJson);
+  if (a.role !== 'admin') throw new Error('NOT_ALLOWED: เฉพาะผู้ดูแล');
+  const p = JSON.parse(payloadJson);
+  if (p.adminPin) {
+    if (String(p.adminPin).length < 4) throw new Error('PIN ผู้ดูแลต้องมีอย่างน้อย 4 ตัว');
+    PropertiesService.getScriptProperties().setProperty('ADMIN_PIN', String(p.adminPin));
+  }
+  if (p.schoolCode && p.schoolPin) {
+    if (String(p.schoolPin).length < 4) throw new Error('PIN โรงเรียนต้องมีอย่างน้อย 4 ตัว');
+    const s = pinSh_(), last = s.getLastRow(), h = hash_(p.schoolPin);
+    let row = 0;
+    if (last > 0) s.getRange(1, 1, last, 1).getValues().forEach((r, i) => { if (String(r[0]) === String(p.schoolCode)) row = i + 1; });
+    if (!row) row = last + 1;
+    s.getRange(row, 1, 1, 2).setValues([[String(p.schoolCode), h]]);
+  }
+  return JSON.stringify({ ok: true });
+}
+function apiPinStatus(authJson) {
+  const a = auth_(authJson);
+  if (a.role !== 'admin') throw new Error('NOT_ALLOWED: เฉพาะผู้ดูแล');
+  const s = pinSh_(), last = s.getLastRow();
+  const codes = last > 0 ? s.getRange(1, 1, last, 1).getValues().map(r => String(r[0])).filter(x => x) : [];
+  return JSON.stringify({ ok: true, schools: codes });
+}
+
+/* ---------- อัปโหลดไฟล์ (โลโก้ ฯลฯ) ---------- */
+function folder_(name, parent) {
+  const it = parent.getFoldersByName(name);
+  return it.hasNext() ? it.next() : parent.createFolder(name);
+}
+// payload: {filename, mimeType, data(base64), section, sub}
+function apiUpload(authJson, json) {
+  const a = auth_(authJson);
+  if (a.role !== 'admin') throw new Error('NOT_ALLOWED: เฉพาะผู้ดูแลอัปโหลดไฟล์ได้');
+  const p = JSON.parse(json);
+  let dir = ROOT_FOLDER_ID ? DriveApp.getFolderById(ROOT_FOLDER_ID) : folder_('เว็บแอป-วิเคราะห์ผล-อบจ', DriveApp.getRootFolder());
+  if (p.section) dir = folder_(p.section, dir);
+  if (p.sub) dir = folder_(p.sub, dir);
+  const file = dir.createFile(Utilities.newBlob(Utilities.base64Decode(p.data), p.mimeType, p.filename));
+  try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (e) {}
+  const id = file.getId();
+  const url = /^image\//.test(p.mimeType)
+    ? 'https://lh3.googleusercontent.com/d/' + id + '=w1600'
+    : 'https://drive.google.com/file/d/' + id + '/view';
+  return JSON.stringify({ ok: true, id: id, url: url });
+}
+function apiDeleteFiles(authJson, idsJson) {
+  const a = auth_(authJson);
+  if (a.role !== 'admin') throw new Error('NOT_ALLOWED: เฉพาะผู้ดูแล');
+  const done = [];
+  JSON.parse(idsJson).forEach(id => { try { DriveApp.getFileById(id).setTrashed(true); done.push(id); } catch (e) {} });
+  return JSON.stringify({ ok: true, deleted: done });
+}
+
+/* ---------- ศูนย์อัปเดต (GitHub Pages) ---------- */
+function updFetch_(path) {
+  const r = UrlFetchApp.fetch(UPD_BASE + path + '?t=' + Date.now(), { muteHttpExceptions: true });
+  if (r.getResponseCode() !== 200) throw new Error('อ่านศูนย์อัปเดตไม่ได้ (' + r.getResponseCode() + ')');
+  return r.getContentText();
+}
+function updCurrentVersion_() { return APP_VERSION; }
+function updLatest_() { return JSON.parse(updFetch_('version.json')); }
+function updNewer_(latest, cur) {
+  const A = String(latest).split('.').map(Number), B = String(cur).split('.').map(Number);
+  for (let i = 0; i < Math.max(A.length, B.length); i++) {
+    const x = A[i] || 0, y = B[i] || 0;
+    if (x > y) return true; if (x < y) return false;
+  }
+  return false;
+}
+function updEditorUrl_() { return 'https://script.google.com/home/projects/' + ScriptApp.getScriptId() + '/edit'; }
+function apiUpdateInfo(authJson) {
+  const a = auth_(authJson);
+  if (a.role !== 'admin') throw new Error('NOT_ALLOWED: เฉพาะผู้ดูแล');
+  const cur = updCurrentVersion_();
+  const out = { ok: true, current: cur, center: UPD_BASE, editor: updEditorUrl_(), owner: '', warn: '' };
+  try { out.owner = Session.getEffectiveUser().getEmail(); } catch (e) {}
+  try {
+    const L = updLatest_();
+    out.latest = L.version; out.date = L.date || ''; out.notes = L.notes || []; out.files = L.files || [];
+    out.newer = updNewer_(L.version, cur);
+  } catch (e) { out.warn = String(e.message || e); out.latest = cur; out.newer = false; out.notes = []; }
+  return JSON.stringify(out);
+}
+function onOpen() {
+  try {
+    SpreadsheetApp.getUi().createMenu('ระบบวิเคราะห์ O-NET')
+      .addItem('ตรวจเวอร์ชัน / วิธีอัปเดต', 'showUpdateInfo_')
+      .addToUi();
+  } catch (e) {}
+}
+function showUpdateInfo_() {
+  let msg;
+  try {
+    const L = updLatest_(), cur = updCurrentVersion_();
+    msg = 'เวอร์ชันที่ใช้อยู่: ' + cur + '\nเวอร์ชันล่าสุด: ' + L.version + (updNewer_(L.version, cur) ? '  (มีเวอร์ชันใหม่)' : '  (เป็นรุ่นล่าสุดแล้ว)') +
+      '\n\nศูนย์อัปเดต: ' + UPD_BASE + '\nหน้าแก้โค้ด: ' + updEditorUrl_() + '\n\nวิธีอัปเดต: คัดลอกโค้ดจากศูนย์อัปเดต → วางทับ Code.gs / index.html → บันทึก → การทำให้ใช้งานได้ › จัดการ › เลือกเวอร์ชันใหม่ › เผยแพร่ (เจ้าของชีตเป็นคน deploy)';
+  } catch (e) { msg = 'ตรวจเวอร์ชันไม่ได้: ' + e.message; }
+  SpreadsheetApp.getUi().alert(msg);
+}
+
+/* ---------- ตั้งค่าครั้งแรก: กดรันเพื่อขอสิทธิ์ + สุ่ม PIN ผู้ดูแล (ดูใน Execution log) ---------- */
+function authorizeOnce() {
+  const f = DriveApp.getRootFolder().createFile('test.txt', 'x');
+  try { f.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (e) {}
+  f.setTrashed(true);
+  sh_(); pinSh_();
+  try { UrlFetchApp.fetch(UPD_BASE + 'version.json', { muteHttpExceptions: true }); } catch (e) {}
+  const props = PropertiesService.getScriptProperties();
+  if (!props.getProperty('ADMIN_PIN')) {
+    const pin = String(Math.floor(100000 + Math.random() * 900000));
+    props.setProperty('ADMIN_PIN', pin);
+    Logger.log('PIN ผู้ดูแลเริ่มต้น = ' + pin + '  (เปลี่ยนได้ในเมนู ตั้งค่า › ความปลอดภัย)');
+  } else {
+    Logger.log('มี PIN ผู้ดูแลอยู่แล้ว (ถ้าลืมให้รัน resetAdminPin)');
+  }
+  Logger.log('พร้อมใช้งาน');
+}
+function resetAdminPin() {
+  const pin = String(Math.floor(100000 + Math.random() * 900000));
+  PropertiesService.getScriptProperties().setProperty('ADMIN_PIN', pin);
+  Logger.log('PIN ผู้ดูแลใหม่ = ' + pin);
+}

@@ -1,0 +1,1460 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<script>/* error bar แยกสคริปต์: แสดง error บนจอ ช่วยผู้ใช้แคปส่งมา */
+(function(){function show(m){var b=document.getElementById('errBar');if(!b){b=document.createElement('div');b.id='errBar';
+b.style.cssText='position:fixed;left:0;right:0;bottom:0;z-index:99999;background:#b91c1c;color:#fff;padding:10px;white-space:pre-wrap;font:13px monospace';
+b.onclick=function(){b.remove()};(document.body||document.documentElement).appendChild(b);}b.textContent+=m+'\n';}
+addEventListener('error',function(e){if(e.target&&e.target!==window)return;show(e.message+' (บรรทัด '+e.lineno+')');});
+addEventListener('unhandledrejection',function(e){show('Promise: '+((e.reason&&e.reason.message)||e.reason));});})();
+</script>
+<script>window.APP_BOOT = <?!= typeof boot!=='undefined' ? boot : 'null' ?>;</script>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>ระบบวิเคราะห์ผลสัมฤทธิ์และ O-NET อบจ.ศรีสะเกษ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --r1:#ef4444;--r2:#dc2626;--r3:#be123c;--r4:#7f1d1d;
+  --grad:linear-gradient(135deg,#f43f5e 0%,#dc2626 55%,#b91c1c 100%);
+  --grad-soft:linear-gradient(135deg,#fff1f2 0%,#ffe4e6 100%);
+  --bg:#ffffff;--bg2:#fff7f7;--ink:#1f2328;--ink2:#5b6270;--line:#f0e1e1;--line2:#e8d5d5;
+  --ok:#15803d;--okbg:#dcfce7;--mid:#a16207;--midbg:#fef9c3;--bad:#b91c1c;--badbg:#fee2e2;--info:#1d4ed8;--infobg:#dbeafe;
+  --sh:0 1px 2px rgba(127,29,29,.05),0 6px 20px -8px rgba(127,29,29,.14);
+  --rad:14px;--sbw:248px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:'Sarabun','Kanit',system-ui,sans-serif;font-size:15px;line-height:1.55}
+h1,h2,h3,h4,.kt{font-family:'Kanit','Sarabun',sans-serif;margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--r3)}
+body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(900px 420px at 85% -10%,rgba(244,63,94,.10),transparent 70%),radial-gradient(700px 380px at -5% 105%,rgba(220,38,38,.06),transparent 70%)}
+/* shell */
+#app{display:flex;min-height:100vh}
+#sb{width:var(--sbw);flex:none;background:#fff;border-right:1px solid var(--line);position:sticky;top:0;height:100vh;overflow:auto;padding:18px 14px;display:flex;flex-direction:column;gap:6px;z-index:30}
+.brand{display:flex;gap:11px;align-items:center;padding:4px 6px 14px;border-bottom:1px solid var(--line);margin-bottom:8px}
+.brand img{width:44px;height:44px;border-radius:12px;object-fit:contain;background:#fff;box-shadow:var(--sh);flex:none}
+.brand b{display:block;font-family:Kanit;font-size:15px;line-height:1.25}
+.brand small{color:var(--ink2);font-size:11.5px;line-height:1.3;display:block}
+.nv-h{font-size:11px;letter-spacing:.08em;color:#a8a1a1;font-weight:700;margin:12px 8px 2px;text-transform:uppercase}
+.nv{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:11px;color:#3a3f48;text-decoration:none;cursor:pointer;border:0;background:none;text-align:left;width:100%;transition:transform .18s,background .18s,color .18s}
+.nv:hover{background:var(--bg2);transform:translateX(2px)}
+.nv:active{transform:scale(.97)}
+.nv.on{background:var(--grad);color:#fff;box-shadow:0 8px 18px -8px rgba(220,38,38,.6)}
+.nv i{width:20px;text-align:center;font-style:normal;opacity:.9}
+#main{flex:1;min-width:0;display:flex;flex-direction:column}
+#top{display:flex;align-items:center;gap:12px;padding:14px 28px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.86);backdrop-filter:blur(8px);position:sticky;top:0;z-index:20;flex-wrap:wrap}
+#top h2{font-size:19px;flex:1;min-width:180px}
+#top .sel{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#burger{display:none}
+#view{padding:24px 28px 40px;flex:1;min-width:0}
+#foot{padding:18px 28px 26px;border-top:1px solid var(--line);color:var(--ink2);font-size:12.5px;text-align:center;background:linear-gradient(180deg,#fff,#fff7f7)}
+#foot b{color:var(--r3);font-weight:600}
+/* controls */
+.btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line2);background:#fff;padding:8px 14px;border-radius:11px;cursor:pointer;font-weight:500;transition:transform .15s,box-shadow .15s,background .15s;white-space:nowrap}
+.btn:hover{background:var(--bg2);box-shadow:var(--sh)}
+.btn:active{transform:scale(.97)}
+.btn.pri{background:var(--grad);color:#fff;border-color:transparent;box-shadow:0 8px 18px -8px rgba(220,38,38,.65)}
+.btn.pri:hover{filter:brightness(1.05)}
+.btn.sm{padding:5px 10px;font-size:13px;border-radius:9px}
+.btn.dng{color:var(--bad);border-color:#fecaca}
+.btn[disabled]{opacity:.5;pointer-events:none}
+input[type=text],input[type=number],input[type=password],input[type=search],select,textarea{border:1px solid var(--line2);background:#fff;border-radius:10px;padding:8px 11px;outline:none;min-width:0;transition:border .15s,box-shadow .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--r1);box-shadow:0 0 0 3px rgba(239,68,68,.15)}
+textarea{width:100%;min-height:70px;resize:vertical}
+label.f{display:block;font-size:12.5px;color:var(--ink2);font-weight:600;margin-bottom:4px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.grow{flex:1;min-width:160px}
+/* cards */
+.card{background:#fff;border:1px solid var(--line);border-radius:var(--rad);box-shadow:var(--sh);padding:18px 20px;position:relative}
+.card h3{font-size:16.5px;margin-bottom:4px}
+.card .sub{color:var(--ink2);font-size:13px;margin-bottom:12px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(360px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.stack>*+*{margin-top:16px}
+.kpi{position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--grad)}
+.kpi .l{font-size:12.5px;color:var(--ink2);font-weight:600}
+.kpi .v{font-family:Kanit;font-size:30px;font-weight:600;line-height:1.15;margin-top:2px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.kpi .s{font-size:12.5px;color:var(--ink2);margin-top:2px}
+.hero{background:var(--grad);color:#fff;border-radius:18px;padding:22px 26px;box-shadow:0 18px 40px -18px rgba(190,18,60,.7);position:relative;overflow:hidden}
+.hero::after{content:'';position:absolute;right:-60px;top:-70px;width:260px;height:260px;border-radius:50%;background:rgba(255,255,255,.12)}
+.hero h2{font-size:22px}.hero p{margin:6px 0 0;opacity:.92;max-width:760px}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:16px;border-bottom:1px solid var(--line)}
+.tab{padding:9px 15px;border:0;background:none;cursor:pointer;font-weight:600;color:var(--ink2);border-bottom:3px solid transparent;margin-bottom:-1px;transition:color .15s}
+.tab:hover{color:var(--r2)}
+.tab.on{color:var(--r2);border-bottom-color:var(--r2)}
+/* tables */
+.tw{overflow:auto;border:1px solid var(--line);border-radius:12px}
+table.t{border-collapse:collapse;width:100%;font-size:14px}
+table.t th{background:var(--grad-soft);color:var(--r4);font-weight:600;text-align:left;padding:9px 12px;position:sticky;top:0;white-space:nowrap;font-family:Kanit;font-size:13px}
+table.t td{padding:8px 12px;border-top:1px solid var(--line);vertical-align:middle}
+table.t tr:hover td{background:#fffafa}
+table.t .n{text-align:right;font-variant-numeric:tabular-nums}
+table.t th.n{text-align:right}
+table.t .c{text-align:center}
+.bdg{display:inline-block;padding:2px 10px;border-radius:99px;font-size:12.5px;font-weight:600;white-space:nowrap}
+.bdg.g{background:var(--okbg);color:var(--ok)}.bdg.y{background:var(--midbg);color:var(--mid)}.bdg.r{background:var(--badbg);color:var(--bad)}.bdg.b{background:var(--infobg);color:var(--info)}.bdg.n{background:#f1f1f1;color:#555}
+.pos{color:var(--ok);font-weight:600}.neg{color:var(--bad);font-weight:600}
+.muted{color:var(--ink2)}.small{font-size:12.5px}
+.empty{padding:34px 16px;text-align:center;color:var(--ink2);background:#fffafa;border:1px dashed var(--line2);border-radius:12px}
+.note{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:11px;padding:10px 14px;font-size:13.5px}
+.note.info{background:#eff6ff;border-color:#bfdbfe;color:#1e40af}
+.note.bad{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+/* bars */
+.hb{display:grid;grid-template-columns:minmax(120px,210px) 1fr 72px;gap:10px;align-items:center;font-size:13.5px;margin:6px 0}
+.hb .bar{height:12px;background:#f8eaea;border-radius:99px;overflow:hidden}
+.hb .bar i{display:block;height:100%;border-radius:99px;background:var(--grad);transform-origin:left;animation:grow .7s cubic-bezier(.2,.8,.2,1)}
+@keyframes grow{from{transform:scaleX(0)}}
+.hb span.v{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.chart svg{width:100%;height:auto;display:block;overflow:visible}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--ink2);margin-top:6px}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+/* heatmap */
+.heat td,.heat th{text-align:center;min-width:64px}
+.heat td.hc{font-variant-numeric:tabular-nums;font-weight:600;font-size:13px}
+.heat td.sch,.heat th.sch{text-align:left;position:sticky;left:0;background:#fff;z-index:1;min-width:170px}
+/* modal / toast */
+#mask{position:fixed;inset:0;background:rgba(40,10,15,.45);display:none;align-items:center;justify-content:center;z-index:100;padding:16px;backdrop-filter:blur(2px)}
+#mask.on{display:flex}
+.md{background:#fff;border-radius:18px;max-width:640px;width:100%;max-height:92vh;overflow:auto;padding:22px 24px;box-shadow:0 30px 70px -20px rgba(0,0,0,.45);animation:pop .22s cubic-bezier(.2,.8,.2,1)}
+.md.wide{max-width:900px}
+@keyframes pop{from{opacity:0;transform:translateY(14px) scale(.97)}}
+.md h3{font-size:19px;margin-bottom:12px}
+.md .act{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
+#toast{position:fixed;right:18px;bottom:18px;display:flex;flex-direction:column;gap:8px;z-index:120}
+.ts{background:#1f2328;color:#fff;padding:10px 16px;border-radius:12px;box-shadow:var(--sh);animation:pop .25s;max-width:340px}
+.ts.ok{background:#166534}.ts.er{background:#b91c1c}
+.prog{height:8px;background:#f8eaea;border-radius:99px;overflow:hidden}
+.prog i{display:block;height:100%;background:var(--grad);width:0;transition:width .25s}
+.drop{border:2px dashed #f3b4bb;border-radius:16px;background:linear-gradient(180deg,#fff,#fff5f5);padding:30px 16px;text-align:center;cursor:pointer;transition:all .2s}
+.drop:hover,.drop.ov{background:#ffe9ec;border-color:var(--r2);transform:translateY(-2px)}
+.drop b{font-family:Kanit;font-size:17px}
+.logo-prev{width:96px;height:96px;border-radius:18px;border:1px solid var(--line2);object-fit:contain;background:#fff}
+.chk{display:flex;gap:8px;align-items:center;font-size:13.5px}
+.stp{display:flex;gap:6px;flex-wrap:wrap}
+.stp button{border:1px solid var(--line2);background:#fff;border-radius:99px;padding:4px 12px;font-size:12.5px;cursor:pointer}
+.stp button.on{background:var(--grad);color:#fff;border-color:transparent}
+.updbox{border:2px solid #f43f5e;border-radius:18px;padding:18px;background:linear-gradient(180deg,#fff,#fff5f5);box-shadow:0 0 0 6px rgba(244,63,94,.08)}
+.glow{animation:glow 1.6s infinite}
+@keyframes glow{0%,100%{box-shadow:0 8px 18px -8px rgba(220,38,38,.6)}50%{box-shadow:0 0 0 7px rgba(244,63,94,.22),0 8px 22px -6px rgba(220,38,38,.7)}}
+.mock{position:relative;border:1px solid var(--line2);border-radius:14px;background:#f8f9fb;overflow:hidden;min-height:230px}
+.mock .bar{background:#e8eaed;padding:7px 12px;font-size:12px;color:#444;display:flex;gap:6px;align-items:center}
+.mock .bar i{width:9px;height:9px;border-radius:50%;background:#bbb;display:inline-block}
+.mock .bd{padding:14px;display:flex;gap:12px;min-height:190px}
+.mock .fl{width:150px;background:#fff;border:1px solid #e1e3e6;border-radius:8px;padding:6px;font-size:12px}
+.mock .fl div{padding:4px 6px;border-radius:5px}
+.mock .ed{flex:1;background:#1f2430;color:#cbd5e1;border-radius:8px;padding:10px;font:11.5px/1.5 monospace;overflow:hidden}
+.mock [data-hl]{outline:0}
+.mock [data-hl="1"]{outline:3px solid #f43f5e;outline-offset:2px;border-radius:6px;animation:glow 1.2s infinite}
+.mock .cur{position:absolute;width:20px;height:20px;transition:left .7s,top .7s;pointer-events:none;z-index:5}
+.mock .menu{position:absolute;right:14px;top:40px;background:#fff;border:1px solid #ddd;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:6px;font-size:12px;display:none}
+.mock .menu div{padding:5px 10px;border-radius:5px}
+.mock .menu.on{display:block}
+.mock .done{position:absolute;inset:auto 14px 14px auto;background:#16a34a;color:#fff;padding:7px 14px;border-radius:99px;font-size:13px;display:none}
+.mock .done.on{display:block;animation:pop .3s}
+.print-head,.print-foot{display:none}
+.reveal{opacity:0;transform:translateY(18px);transition:opacity .55s ease,transform .55s cubic-bezier(.2,.8,.2,1)}
+.reveal.in{opacity:1;transform:none}
+.skeleton{background:linear-gradient(90deg,#f6eaea 25%,#fbf3f3 50%,#f6eaea 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:10px;height:90px}
+@keyframes shimmer{to{background-position:-200% 0}}
+@media(max-width:900px){
+  #sb{position:fixed;left:0;top:0;transform:translateX(-102%);transition:transform .25s;box-shadow:var(--sh)}
+  #sb.open{transform:none}
+  #burger{display:inline-flex}
+  #view{padding:16px 14px 30px}#top{padding:10px 14px}
+  .hb{grid-template-columns:100px 1fr 60px}
+}
+#scrim{display:none;position:fixed;inset:0;background:rgba(40,10,15,.4);z-index:25;opacity:0;transition:opacity .25s}
+#scrim.on{display:block;opacity:1}
+#simbar{display:none;background:linear-gradient(90deg,#fef3c7,#fde68a);color:#78350f;padding:8px 28px;font-size:13.5px;font-weight:600;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:1px solid #fcd34d}
+#simbar.on{display:flex}
+.mnav{display:none}
+@media(max-width:900px){
+  body{font-size:15.5px}
+  .btn{min-height:42px}.btn.sm{min-height:36px}
+  input[type=text],input[type=number],input[type=password],input[type=search],select{min-height:42px;font-size:16px}
+  #top h2{font-size:17px;min-width:0;flex:1 1 55%}
+  #top .sel{width:100%}#top .sel select{flex:1;min-width:110px}
+  .card{padding:14px 14px;border-radius:13px}
+  .hero{padding:16px 16px;border-radius:15px}.hero h2{font-size:18px}
+  .grid{gap:12px}.g2{grid-template-columns:1fr}.g3{grid-template-columns:1fr}.g4{grid-template-columns:repeat(2,1fr)}
+  .kpi .v{font-size:24px}
+  .tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;gap:0}
+  .tabs::-webkit-scrollbar{display:none}.tab{white-space:nowrap;padding:10px 13px}
+  table.t{font-size:13px}table.t th,table.t td{padding:7px 9px}
+  .heat td.sch,.heat th.sch{min-width:128px}
+  .md,.md.wide{max-width:none;width:100%;height:100%;max-height:100%;border-radius:0;padding:18px 16px 24px}
+  #mask{padding:0;align-items:stretch}
+  #foot{padding:14px 14px 78px}
+  #simbar{padding:8px 14px}
+  #toast{left:12px;right:12px;bottom:76px}.ts{max-width:none}
+  .row{gap:9px}.grow{flex-basis:100%}
+  .mock .fl{display:none}
+  .mnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:22;background:rgba(255,255,255,.96);backdrop-filter:blur(8px);border-top:1px solid var(--line);padding:5px 4px calc(5px + env(safe-area-inset-bottom));justify-content:space-around}
+  .mnav button{flex:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:1px;font-size:11px;color:var(--ink2);padding:5px 2px;border-radius:10px;cursor:pointer;transition:transform .15s,color .15s}
+  .mnav button i{font-style:normal;font-size:19px;line-height:1.1}
+  .mnav button.on{color:var(--r2);font-weight:700}
+  .mnav button:active{transform:scale(.92)}
+}
+@media(max-width:420px){.g4{grid-template-columns:1fr 1fr}.kpi .l{font-size:12px}.hb{grid-template-columns:84px 1fr 54px;gap:7px}}
+@media print{
+  @page{size:A4;margin:14mm 12mm 18mm}
+  .mnav,#simbar,#scrim{display:none!important}
+  #sb,#top,#foot,#toast,#mask,.noprint,.tabs,.btn{display:none!important}
+  body{background:#fff;font-size:12px}body::before{display:none}
+  #app{display:block}#view{padding:0}
+  .card{box-shadow:none;break-inside:avoid;border-color:#ddd}
+  .reveal{opacity:1!important;transform:none!important}
+  .print-head{display:flex;gap:12px;align-items:center;border-bottom:3px solid #dc2626;padding-bottom:8px;margin-bottom:12px}
+  .print-head img{width:46px;height:46px;object-fit:contain}
+  .print-head b{font-family:Kanit;font-size:16px;display:block}
+  .print-foot{display:block;margin-top:18px;padding-top:8px;border-top:1px solid #ccc;font-size:11px;color:#555;text-align:center}
+  .tw{overflow:visible;border:0}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.reveal{opacity:1;transform:none}}
+.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-items:center}
+@media(max-width:700px){.grid2,.grid3{grid-template-columns:1fr}}
+.card.flat{box-shadow:none;border:1px solid var(--line);padding:12px}
+.upbox{border:2px solid #fb7185;box-shadow:0 0 0 4px rgba(251,113,133,.12)}
+.upm{position:relative;border:1px solid #d9d9e0;border-radius:12px;overflow:hidden;background:#fff;font-size:12.5px}
+.upm-bar{background:#f1f1f4;padding:8px 12px;display:flex;gap:6px;align-items:center}.upm-bar i{width:9px;height:9px;border-radius:50%;background:#d4d4dc}.upm-bar span{margin-left:10px;color:#777}
+.upm-body{display:flex;min-height:230px;position:relative}.upm-side{width:110px;border-right:1px solid #eee;padding:8px;background:#fafafa}.upm-side div{padding:6px 8px;border-radius:6px;margin-bottom:4px}
+.upm-main{flex:1;position:relative;padding:10px}.upm-code{background:#1e1e2e;color:#cdd6f4;border-radius:8px;padding:12px;font-family:monospace;white-space:pre;min-height:110px;margin-top:34px}
+.upm-tool{position:absolute;top:8px;right:10px;display:flex;gap:8px}.upm-tool span{padding:4px 10px;border:1px solid #ddd;border-radius:7px;background:#fff}
+.upm-menu{display:none;position:absolute;top:38px;right:10px;background:#fff;border:1px solid #ddd;border-radius:8px;padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:2}.upm-menu div{padding:6px 10px;border-radius:6px}
+.upm-dlg{display:none;position:absolute;left:18%;right:18%;top:56px;background:#fff;border:1px solid #ddd;border-radius:12px;padding:14px;box-shadow:0 14px 40px rgba(0,0,0,.18);z-index:3}
+.upm-ver{display:none;margin:10px 0;padding:8px;border:1px solid #eee;border-radius:8px}.upm-pub{border:0;background:#1a73e8;color:#fff;border-radius:7px;padding:7px 14px;font:inherit}.upm-ok{display:none;margin-top:10px;color:#15803d;font-weight:700}
+.upm [data-t]{transition:box-shadow .25s,background .25s}.upm .hl{box-shadow:0 0 0 3px #fb7185;background:#fff1f2!important;color:#9f1239}
+.upm-cur{position:absolute;left:0;top:0;width:18px;height:18px;border-radius:50% 50% 50% 0;background:#dc2626;opacity:.85;transform:translate(20px,20px);transition:transform .7s cubic-bezier(.2,.8,.2,1);pointer-events:none;z-index:9}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
+</head>
+<body>
+<div id="app">
+  <aside id="sb"></aside>
+  <div id="scrim" onclick="toggleSb(false)"></div>
+  <div id="main">
+    <header id="top"></header>
+    <div id="simbar"></div>
+    <main id="view"><div class="skeleton"></div></main>
+    <footer id="foot"></footer>
+  </div>
+</div>
+<nav class="mnav" id="mnav"></nav>
+<div id="mask"><div class="md" id="md"></div></div>
+<div id="toast"></div>
+<script>
+/* ===== O-NET PDF parser (สทศ.) — อาศัยตัวเลข/ตำแหน่งแถวเป็นหลัก เพราะตัวอักษรไทยใน PDF ของ สทศ. เพี้ยนเวลาดึงข้อความ ===== */
+const OnetParser = (function(){
+  const LV7 = ['sch','size','loc','prov','dept','reg','nat'];
+  const LV11 = ['sch','size','locIn','locOut','prov','area','dept','moeReg','reg','moi','nat'];
+  const SUBJ = {'91':'ภาษาไทย','92':'สังคมศึกษา ศาสนา และวัฒนธรรม','93':'ภาษาอังกฤษ','94':'คณิตศาสตร์','95':'วิทยาศาสตร์','01':'ภาษาไทย','02':'สังคมศึกษา ศาสนา และวัฒนธรรม','03':'ภาษาอังกฤษ','04':'คณิตศาสตร์','05':'วิทยาศาสตร์'};
+  const CANON={'91':'TH','92':'SO','93':'EN','94':'MA','95':'SC','01':'TH','02':'SO','03':'EN','04':'MA','05':'SC'};
+  const PFX = {'91':'ท','92':'ส','93':'ต','94':'ค','95':'ว','01':'ท','02':'ส','03':'ต','04':'ค','05':'ว'};
+  const FORM_BY_FILE = [[/IndividualScore/i,1],[/ContentStat/i,5],[/SbjStat/i,6],[/ScoreDistribution/i,4],[/StdQuality/i,3],[/StatbySchool/i,2]];
+
+  function toLines(items){
+    const its = items.map(i=>({x:i.x,y:i.y,s:String(i.s||'').trim()})).filter(i=>i.s!=='');
+    its.sort((a,b)=>b.y-a.y||a.x-b.x);
+    const lines=[];
+    its.forEach(it=>{ let l=lines.find(l=>Math.abs(l.y-it.y)<=3); if(!l){ l={y:it.y,items:[]}; lines.push(l); } l.items.push(it); });
+    lines.sort((a,b)=>b.y-a.y);
+    lines.forEach(l=>{ l.items.sort((a,b)=>a.x-b.x); l.text=l.items.map(i=>i.s).join(' '); });
+    return lines;
+  }
+  // คืน token ตัวเลข (raw) ตามลำดับ; "-" = ไม่มีค่า
+  function tokens(str){
+    const out=[]; const re=/(^|\s)(-?\d{1,3}(?:,\d{3})+(?:\.\d+)?|-?\d+(?:\.\d+)?|-)(?=\s|$)/g; let m;
+    str=String(str).replace(/\*/g,' ');
+    while((m=re.exec(str))) out.push(m[2]);
+    return out;
+  }
+  const val = t => t==='-'||t==null ? null : parseFloat(String(t).replace(/,/g,''));
+  function labelOf(line){ // ข้อความก่อนตัวเลขตัวแรก
+    const parts=[]; for(const it of line.items){ if(/^-?[\d,]+(\.\d+)?$/.test(it.s)) break; parts.push(it.s); } return parts.join(' ').trim();
+  }
+  function pack(raw){ // 15 token = แบบ ปรนัย/อัตนัย/รวม ; 7 token = แบบรวมอย่างเดียว
+    const v=raw.map(val);
+    if(v.length===15) return {t:[v[0],v[3],v[6],v[9],v[12],v[13],v[14]], pa:[v[1],v[2]]};
+    if(v.length===7)  return {t:v.slice(0,7)};
+    return null;
+  }
+  function meta(lines, fileName){
+    const head=lines.slice(0,14); const m={};
+    const ft = head.map(l=>l.text).join(' \n ').match(/ฉบ\S*\s*(\d)\s*-/);
+    m.form = ft ? +ft[1] : null;
+    if(!m.form){ for(const [re,f] of FORM_BY_FILE){ if(re.test(fileName||'')){ m.form=f; break; } } }
+    for(const l of head){ const c=l.text.match(/(?:^|\s)(\d{10})(?:\s|$)/); if(c){ m.code=c[1]; const idx=l.items.findIndex(i=>i.s===c[1]); const rest=l.items.slice(idx+2).map(i=>i.s).join(' ').trim(); m.name=rest; break; } }
+    for(const l of head){
+      if(/ขนาด/.test(l.items[0]&&l.items[0].s) && tokens(l.text).length===0){ m.size=l.items[1]&&l.items[1].s; m.loc=l.items[3]&&l.items[3].s; }
+      if(/^\S*จ\S*ง\S*ห\S*ด$/.test((l.items[0]&&l.items[0].s)||'') && tokens(l.text).length===0){ m.prov=l.items[1]&&l.items[1].s; m.dept=l.items.slice(5).map(i=>i.s).join(' '); }
+    }
+    for(const l of head){ const y=l.text.match(/(\d)\s+\S+\s+(25\d\d)/); if(y){ m.grade=+y[1]; m.year=+y[2]; m.stage=/ธยม|มธ/.test(l.text)?'M':(/ถม/.test(l.text)?'P':null); break; } }
+    const fm=(fileName||'').match(/_([MP])(\d)_/i); if(fm){ if(!m.stage) m.stage=fm[1].toUpperCase(); if(!m.grade) m.grade=+fm[2]; }
+    const fy=(fileName||'').match(/_(25\d\d)_/); if(fy&&!m.year) m.year=+fy[1];
+    if(!m.stage) m.stage='M';
+    m.level=m.stage+m.grade;
+    // ปรับค่าที่ตั้ง/ขนาดจากข้อความเพี้ยน
+    const sz=m.size||''; m.sizeN = /^เล/.test(sz)?'เล็ก':/^กล/.test(sz)?'กลาง':/พ.{0,2}เศ|ศษ/.test(sz)?'ใหญ่พิเศษ':/^ให/.test(sz)?'ใหญ่':sz;
+    const lc=m.loc||''; m.locN = /^นอก/.test(lc)?'นอกเมือง':/^ใน/.test(lc)?'ในเมือง':lc;
+    return m;
+  }
+  function parseStatForm(lines, form, warn){
+    const subj={}; let cur=null, a=0, expA=(form===6?11:7);
+    const keys = form===6?LV11:LV7;
+    lines.forEach(l=>{
+      const hd=l.text.match(/\((\d{2})\)\s*$/);
+      if(hd && l.items[0] && /^\S{1,5}$/.test(l.items[0].s) && l.items.length<=8 && !/\d\.\d/.test(l.text)){ cur=hd[1]; subj[cur]=subj[cur]||{lv:{},std:{},cont:{}}; a=0; return; }
+      if(!cur) return;
+      const raw=tokens(l.text);
+      const sc=l.text.match(/(?:^|\s)([ก-ฮ])\s+(\d+\.\d+)(?=\s)/);
+      if(form!==5 && sc && raw.length>=15){ // แถวมาตรฐาน
+        const rest=l.text.replace(sc[0],' ');
+        const r=tokens(rest).map(val);
+        if(r.length===15){ subj[cur].std[sc[1]+sc[2]]=r; }
+        return;
+      }
+      if(!raw.length) return;
+      if(a<expA && raw[0] && !/\./.test(raw[0]) && (raw.length===7||raw.length===15)){ const p=pack(raw); if(p){ subj[cur].lv[keys[a]]=p.t; if(p.pa&&a===0) subj[cur].paSch=p.pa; a++; } return; }
+      if(form===5 && a>=expA && raw.length===15 && /\./.test(raw[0])){ const lab=labelOf(l); subj[cur].cont[lab]=raw.map(val); return; }
+    });
+    Object.keys(subj).forEach(c=>{ const n=Object.keys(subj[c].lv).length; if(n!==expA) warn.push('วิชา '+c+': พบแถวระดับ '+n+' จาก '+expA); });
+    return subj;
+  }
+  function parseDist(lines){
+    const out={};
+    lines.forEach(l=>{
+      const f=l.items[0]&&l.items[0].s; if(!/^\d{2}$/.test(f||'')||l.items[0].x>70) return;
+      const t=tokens(l.items.slice(1).map(i=>i.s).join(' ')); if(t.length>=12 && t.slice(0,12).every(x=>/^\d+$/.test(x))) out[f]=t.slice(0,12).map(Number);
+    });
+    return out;
+  }
+  function parseIndividual(lines){
+    const codes=[]; let rows=[];
+    lines.forEach(l=>{
+      const m=l.text.match(/^\s*(\d+)\s+(\d{8})\s+(\d{13})\s/);
+      if(m){ const rest=l.text.slice(m[0].length); rows.push(tokens(rest).map(val)); }
+      else { (l.text.match(/(?:^|\s)((?:0|9)\d)(?=\s|$)/g)||[]).forEach(s=>{ const c=s.trim(); if(rows.length===0 && !codes.includes(c)) codes.push(c); }); }
+    });
+    if(!rows.length||!codes.length) return null;
+    const k=codes.length; const T=rows[0].length;
+    const sc=T-k-1; const split=(sc===k+2);
+    const res={n:rows.length, subj:{}};
+    codes.forEach((c,i)=>{
+      const ti = split ? (i===0?2:i+2) : i; // ตำแหน่ง "รวม"
+      const li = sc + i;
+      const sv=rows.map(r=>r[ti]).filter(v=>v!=null); const lv=rows.map(r=>r[li]).filter(v=>v!=null);
+      res.subj[c]={n:sv.length, abs:rows.length-sv.length, m:sv.length?+(sv.reduce((a,b)=>a+b,0)/sv.length).toFixed(2):null, lm:lv.length?+(lv.reduce((a,b)=>a+b,0)/lv.length).toFixed(2):null};
+    });
+    return res;
+  }
+  function parse(pages, fileName){
+    const lines=[]; pages.forEach(p=>toLines(p).forEach(l=>lines.push(l)));
+    const warn=[]; const m=meta(pages.length?toLines(pages[0]):[], fileName);
+    const out={file:fileName,form:m.form,school:{code:m.code,name:m.name,size:m.sizeN,loc:m.locN,prov:m.prov},year:m.year,level:m.level,stage:m.stage,warn};
+    if(!m.code||!m.year||!m.form){ out.error='ไม่ใช่รายงาน O-NET ตามแบบ สทศ. (หา รหัสโรงเรียน/ปีการศึกษา/ฉบับที่ ไม่พบ)'; return out; }
+    if(m.form===2||m.form===5||m.form===6) out.subj=parseStatForm(lines,m.form,warn);
+    else if(m.form===4) out.dist=parseDist(lines);
+    else if(m.form===1){ out.ind=parseIndividual(lines); if(!out.ind) warn.push('อ่านตารางรายบุคคลไม่สำเร็จ'); }
+    else if(m.form===3){ out.skipped='ฉบับที่ 3 เป็นข้อความอธิบายระดับคุณภาพ ไม่มีตัวเลขสำหรับวิเคราะห์ (ข้าม)'; }
+    return out;
+  }
+  return {parse, SUBJ, PFX, CANON, LV7, LV11};
+})();
+if(typeof module!=='undefined') module.exports=OnetParser;
+
+'use strict';
+/* ===================== CORE: utils / store / auth / UI / charts / export / motion ===================== */
+const APP_VERSION = '1.0.0';
+const CREDIT_DESIGN = 'ออกแบบระบบโดย ดร.ปิยะพันธ์ พิชญ์ประเสริฐ';
+const CREDIT_DEV = 'พัฒนาระบบโดย นนทพัทธ์ หิรัญเรือง';
+const UPD_CENTER = ['https:', '', 'nonthaphathr.github.io', 'sisaket-edu-analytics', ''].join('/');
+const $ = (s, r) => (r || document).querySelector(s);
+const $$ = (s, r) => [...(r || document).querySelectorAll(s)];
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = (v, d = 2) => (v == null || isNaN(v)) ? '–' : Number(v).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+const fmtI = v => (v == null || isNaN(v)) ? '–' : Number(v).toLocaleString('en-US');
+const sgn = (v, d = 2) => (v == null || isNaN(v)) ? '–' : (v > 0 ? '+' : '') + fmt(v, d);
+const num = v => { const n = parseFloat(String(v).replace(/,/g, '')); return isNaN(n) ? null : n; };
+const sum = a => a.reduce((x, y) => x + y, 0);
+const avg = a => a.length ? sum(a) / a.length : null;
+const wavg = (rows, vf, wf) => { let w = 0, s = 0; rows.forEach(r => { const v = vf(r), x = wf(r); if (v != null && x > 0) { s += v * x; w += x; } }); return w ? s / w : null; };
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+
+/* ---------- store ---------- */
+let SIM = false; // โหมดจำลองข้อมูล: ทำงานในหน่วยความจำ ไม่เขียนฐานข้อมูลจริง
+const MODE = (window.APP_BOOT && typeof google !== 'undefined' && google.script && google.script.run) ? 'gas' : 'demo';
+const Store = { data: (window.APP_BOOT && window.APP_BOOT.data) || {} };
+const col = c => Store.data[c] || (Store.data[c] = {});
+function dmerge(a, b) {
+  const o = Object.assign({}, a);
+  Object.keys(b).forEach(k => {
+    const x = o[k], y = b[k];
+    if (y && typeof y === 'object' && !Array.isArray(y) && x && typeof x === 'object' && !Array.isArray(x)) o[k] = dmerge(x, y); else o[k] = y;
+  });
+  return o;
+}
+let AUTH = null; try { AUTH = JSON.parse(sessionStorage.getItem('app_auth') || 'null'); } catch (e) {}
+const authStr = () => JSON.stringify(AUTH ? { pin: AUTH.pin, sch: AUTH.sch || '' } : {});
+const isAdmin = () => SIM || (!!AUTH && AUTH.role === 'admin');
+function setAuth(a) { AUTH = a; try { if (a) sessionStorage.setItem('app_auth', JSON.stringify(a)); else sessionStorage.removeItem('app_auth'); } catch (e) {} }
+
+function gasCall(fn, ...args) {
+  return new Promise((resolve, reject) => {
+    google.script.run
+      .withSuccessHandler(r => { try { resolve(typeof r === 'string' ? JSON.parse(r) : r); } catch (e) { resolve(r); } })
+      .withFailureHandler(err => {
+        const e = new Error(String(err && err.message || err).replace(/^Error:\s*/, ''));
+        if (/PIN_INVALID|PIN_LOCKED/.test(e.message)) { setAuth(null); try { renderChrome(); } catch (x) {} }
+        e.message = e.message.replace(/^(PIN_\w+|NO_PIN|NOT_ALLOWED):\s*/, '');
+        reject(e);
+      })[fn](...args);
+  });
+}
+async function commit(ops, onProg) {
+  if (MODE === 'gas' && !SIM) {
+    const CH = 60;
+    for (let i = 0; i < ops.length; i += CH) {
+      await gasCall('apiCommit', authStr(), JSON.stringify(ops.slice(i, i + CH)));
+      if (onProg) onProg(Math.min(100, Math.round((i + CH) / ops.length * 100)));
+    }
+  }
+  ops.forEach(o => {
+    const c = col(o.c);
+    if (o.op === 'delete') delete c[o.id];
+    else c[o.id] = o.op === 'merge' ? dmerge(c[o.id] || {}, o.data) : o.data;
+  });
+  if (typeof onDataChanged === 'function') onDataChanged();
+}
+
+/* ---------- modal / toast ---------- */
+function toast(msg, kind) {
+  const d = document.createElement('div'); d.className = 'ts ' + (kind || ''); d.textContent = msg;
+  $('#toast').appendChild(d);
+  setTimeout(() => { d.style.transition = 'opacity .3s,transform .3s'; d.style.opacity = '0'; d.style.transform = 'translateY(8px)'; setTimeout(() => d.remove(), 320); }, kind === 'er' ? 5200 : 2600);
+}
+let _mdResolve = null;
+function openModal(html, wide) {
+  const md = $('#md'); md.className = 'md' + (wide ? ' wide' : ''); md.innerHTML = html;
+  $('#mask').classList.add('on');
+  const f = $('input,select,textarea', md); if (f && !/checkbox|file/.test(f.type)) setTimeout(() => f.focus(), 60);
+}
+function closeModal(v) { $('#mask').classList.remove('on'); const r = _mdResolve; _mdResolve = null; if (r) r(v); }
+function ask(html, opts) { // คืน Promise<true|false>
+  opts = opts || {};
+  return new Promise(res => {
+    _mdResolve = res;
+    openModal('<h3>' + esc(opts.title || 'ยืนยัน') + '</h3><div>' + html + '</div><div class="act"><button class="btn" onclick="closeModal(false)">ยกเลิก</button><button class="btn pri" onclick="closeModal(true)">' + esc(opts.ok || 'ตกลง') + '</button></div>');
+  });
+}
+const alertBox = (msg, title) => new Promise(res => { _mdResolve = res; openModal('<h3>' + esc(title || 'แจ้งเตือน') + '</h3><div>' + msg + '</div><div class="act"><button class="btn pri" onclick="closeModal(true)">ปิด</button></div>'); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#mask').classList.contains('on')) closeModal(false); });
+document.addEventListener('mousedown', e => { if (e.target.id === 'mask') closeModal(false); });
+
+function openLogin() {
+  return new Promise(res => {
+    _mdResolve = res;
+    const sch = Object.values(col('schools')).sort((a, b) => (a.name || '').localeCompare(b.name || '', 'th'));
+    openModal('<h3>เข้าสู่ระบบเพื่อบันทึก/แก้ไขข้อมูล</h3>' +
+      '<div class="row"><div class="grow"><label class="f">สถานะ</label><select id="lgRole" onchange="$(\'#lgSchW\').style.display=this.value===\'school\'?\'block\':\'none\'"><option value="admin">ผู้ดูแล (ศึกษานิเทศก์ / กลุ่มงานนิเทศ)</option><option value="school">โรงเรียน</option></select></div></div>' +
+      '<div id="lgSchW" style="display:none;margin-top:10px"><label class="f">โรงเรียน</label><select id="lgSch" style="width:100%">' + sch.map(s => '<option value="' + esc(s.code) + '">' + esc(s.name) + '</option>').join('') + '</select></div>' +
+      '<div style="margin-top:10px"><label class="f">PIN</label><input type="password" id="lgPin" style="width:100%" inputmode="numeric" autocomplete="off" onkeydown="if(event.key===\'Enter\')doLogin()"/></div>' +
+      '<div id="lgErr" class="small neg" style="margin-top:8px"></div>' +
+      '<div class="act"><button class="btn" onclick="closeModal(false)">ยกเลิก</button><button class="btn pri" id="lgGo" onclick="doLogin()">เข้าสู่ระบบ</button></div>');
+  });
+}
+async function doLogin() {
+  const role = $('#lgRole').value, pin = $('#lgPin').value.trim(), sch = role === 'school' ? $('#lgSch').value : '';
+  if (!pin) { $('#lgErr').textContent = 'กรุณากรอก PIN'; return; }
+  if (role === 'school' && !sch) { $('#lgErr').textContent = 'กรุณาเลือกโรงเรียน (ต้องเพิ่มโรงเรียนในระบบก่อน)'; return; }
+  const b = $('#lgGo'); b.disabled = true;
+  try {
+    if (MODE === 'gas') { const a = { pin, sch }; const prev = AUTH; AUTH = a; const r = await gasCall('apiLogin', JSON.stringify(a)); setAuth({ pin, sch, role: r.role }); }
+    else setAuth({ pin, sch, role: role });
+    closeModal(true); renderChrome(); toast('เข้าสู่ระบบแล้ว', 'ok'); if (typeof render === 'function') render();
+  } catch (e) { AUTH = null; $('#lgErr').textContent = e.message; b.disabled = false; }
+}
+async function needAuth() { if (AUTH || SIM) return true; return !!(await openLogin()) && !!AUTH; }
+function logout() { setAuth(null); renderChrome(); toast('ออกจากระบบแล้ว'); render(); }
+
+/* ---------- motion & micro-interactions (GPU only) ---------- */
+const REDUCED = matchMedia('(prefers-reduced-motion:reduce)').matches;
+const io = ('IntersectionObserver' in window) ? new IntersectionObserver(es => es.forEach(en => { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } }), { threshold: .08, rootMargin: '0px 0px -6% 0px' }) : null;
+function initMotion(root) {
+  root = root || document;
+  // stagger การ์ด/แถวหลักให้ทยอยเข้า
+  $$('.card,.hero,.tw,.grid>div', root).forEach((el, i) => { if (!el.dataset.rv) { el.dataset.rv = 1; el.classList.add('reveal'); el.style.transitionDelay = Math.min(i, 10) * 45 + 'ms'; } });
+  $$('.reveal:not(.in)', root).forEach(el => { if (REDUCED || !io) el.classList.add('in'); else io.observe(el); });
+  // นับเลข KPI ขึ้น
+  $$('[data-count]', root).forEach(el => {
+    if (el.dataset.done) return; el.dataset.done = 1;
+    const to = parseFloat(el.dataset.count), d = +(el.dataset.d || 0), pre = el.dataset.pre || '';
+    if (REDUCED || isNaN(to)) { el.textContent = pre + fmt(to, d); return; }
+    const t0 = performance.now(), dur = 800;
+    (function step(t) { const p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3); el.textContent = pre + fmt(to * e, d); if (p < 1) requestAnimationFrame(step); })(t0);
+  });
+}
+// ripple เบา ๆ บนปุ่ม
+document.addEventListener('pointerdown', e => {
+  const b = e.target.closest('.btn,.nv,.tab'); if (!b || REDUCED) return;
+  const r = b.getBoundingClientRect(), s = Math.max(r.width, r.height), d = document.createElement('span');
+  d.style.cssText = 'position:absolute;border-radius:50%;pointer-events:none;background:currentColor;opacity:.16;transform:scale(0);transition:transform .5s,opacity .6s;width:' + s + 'px;height:' + s + 'px;left:' + (e.clientX - r.left - s / 2) + 'px;top:' + (e.clientY - r.top - s / 2) + 'px';
+  if (getComputedStyle(b).position === 'static') b.style.position = 'relative';
+  b.style.overflow = 'hidden'; b.appendChild(d);
+  requestAnimationFrame(() => { d.style.transform = 'scale(2.4)'; d.style.opacity = '0'; });
+  setTimeout(() => d.remove(), 650);
+});
+// การ์ดเอียงนิด ๆ ตามเมาส์ (เฉพาะ KPI, อุปกรณ์ที่ hover ได้)
+function initTilt(root) {
+  if (REDUCED || !matchMedia('(hover:hover)').matches) return;
+  $$('.kpi', root).forEach(c => {
+    if (c.dataset.tilt) return; c.dataset.tilt = 1; let raf = null;
+    c.addEventListener('pointermove', e => { const r = c.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height; if (raf) return; raf = requestAnimationFrame(() => { raf = null; c.style.transform = 'perspective(800px) rotateX(' + ((.5 - y) * 5) + 'deg) rotateY(' + ((x - .5) * 6) + 'deg) translateY(-2px)'; }); });
+    c.addEventListener('pointerleave', () => { c.style.transform = ''; });
+    c.style.transition = 'transform .25s ease';
+  });
+}
+function pageIn(el) { if (REDUCED) return; el.style.opacity = '0'; el.style.transform = 'translateY(10px)'; requestAnimationFrame(() => { el.style.transition = 'opacity .35s ease,transform .35s cubic-bezier(.2,.8,.2,1)'; el.style.opacity = '1'; el.style.transform = 'none'; setTimeout(() => { el.style.transition = ''; el.style.transform = ''; }, 400); }); }
+
+/* ---------- charts (SVG ล้วน ไม่พึ่งไลบรารี) ---------- */
+const PAL = ['#dc2626', '#f59e0b', '#64748b', '#0ea5e9', '#16a34a', '#a855f7'];
+function niceMax(v) { if (!(v > 0)) return 1; const p = Math.pow(10, Math.floor(Math.log10(v))), f = v / p; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p; }
+function chartBars(labels, series, o) {
+  o = o || {}; const W = 680, H = o.h || 240, L = 44, R = 12, T = 18, B = 46, pw = W - L - R, ph = H - T - B;
+  const all = series.flatMap(s => s.vals).filter(v => v != null);
+  const mx = o.max || niceMax(Math.max(...all, 0.0001)), n = labels.length, g = pw / Math.max(n, 1), k = series.length, bw = Math.min(34, (g * .74) / k);
+  let s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img">';
+  for (let i = 0; i <= 4; i++) { const y = T + ph - ph * i / 4; s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y + '" y2="' + y + '" stroke="#f1e5e5"/><text x="' + (L - 6) + '" y="' + (y + 4) + '" font-size="11" text-anchor="end" fill="#8a8f98">' + fmt(mx * i / 4, mx <= 5 ? 1 : 0) + '</text>'; }
+  labels.forEach((lb, i) => {
+    const cx = L + g * i + g / 2;
+    series.forEach((se, j) => {
+      const v = se.vals[i]; if (v == null) return; const h = Math.max(0, ph * v / mx), x = cx - (k * bw) / 2 + j * bw, y = T + ph - h;
+      s += '<rect x="' + x + '" y="' + y + '" width="' + (bw - 3) + '" height="' + h + '" rx="5" fill="' + (se.color || PAL[j % PAL.length]) + '" style="transform-origin:' + x + 'px ' + (T + ph) + 'px;animation:barUp .7s cubic-bezier(.2,.8,.2,1) both;animation-delay:' + (i * 40) + 'ms"><title>' + esc(se.name + ': ' + fmt(v)) + '</title></rect>';
+      if (o.vals !== false && n * k <= 16) s += '<text x="' + (x + (bw - 3) / 2) + '" y="' + (y - 4) + '" font-size="10.5" text-anchor="middle" fill="#444">' + fmt(v, o.d == null ? 1 : o.d) + '</text>';
+    });
+    const t = String(lb), t1 = t.length > 14 ? t.slice(0, 13) + '…' : t;
+    s += '<text x="' + cx + '" y="' + (H - B + 18) + '" font-size="12" text-anchor="middle" fill="#3a3f48">' + esc(t1) + '</text>';
+  });
+  if (o.ref != null) { const y = T + ph - ph * o.ref / mx; s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y + '" y2="' + y + '" stroke="#16a34a" stroke-dasharray="5 4"/><text x="' + (W - R) + '" y="' + (y - 4) + '" font-size="11" fill="#16a34a" text-anchor="end">' + esc(o.refLabel || '') + '</text>'; }
+  s += '</svg>';
+  return '<div class="chart">' + s + legend(series) + '</div>';
+}
+function legend(series) { return series.length > 1 ? '<div class="legend">' + series.map((x, j) => '<span><i style="background:' + (x.color || PAL[j % PAL.length]) + '"></i>' + esc(x.name) + '</span>').join('') + '</div>' : ''; }
+function chartLine(labels, series, o) {
+  o = o || {}; const W = 680, H = o.h || 240, L = 46, R = 18, T = 16, B = 38, pw = W - L - R, ph = H - T - B;
+  const all = series.flatMap(s => s.vals).filter(v => v != null); if (!all.length) return '<div class="empty">ยังไม่มีข้อมูล</div>';
+  let mn = o.min != null ? o.min : Math.min(...all), mx = o.max != null ? o.max : Math.max(...all);
+  if (mx === mn) { mx += 1; mn -= 1; } const pad = (mx - mn) * .12; if (o.min == null) mn -= pad; if (o.max == null) mx += pad;
+  const n = labels.length, X = i => L + (n === 1 ? pw / 2 : pw * i / (n - 1)), Y = v => T + ph - ph * (v - mn) / (mx - mn);
+  let s = '<svg viewBox="0 0 ' + W + ' ' + H + '">';
+  for (let i = 0; i <= 4; i++) { const v = mn + (mx - mn) * i / 4, y = Y(v); s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y + '" y2="' + y + '" stroke="#f1e5e5"/><text x="' + (L - 6) + '" y="' + (y + 4) + '" font-size="11" text-anchor="end" fill="#8a8f98">' + fmt(v, o.d == null ? 1 : o.d) + '</text>'; }
+  labels.forEach((lb, i) => { s += '<text x="' + X(i) + '" y="' + (H - 12) + '" font-size="12" text-anchor="middle" fill="#3a3f48">' + esc(lb) + '</text>'; });
+  series.forEach((se, j) => {
+    const c = se.color || PAL[j % PAL.length], pts = se.vals.map((v, i) => v == null ? null : [X(i), Y(v)]).filter(Boolean);
+    if (pts.length > 1) s += '<path d="M' + pts.map(p => p[0] + ' ' + p[1]).join(' L') + '" fill="none" stroke="' + c + '" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" ' + (se.dash ? 'stroke-dasharray="6 5"' : 'pathLength="1" style="stroke-dasharray:1;stroke-dashoffset:1;animation:draw 1.1s ease forwards"') + '/>';
+    se.vals.forEach((v, i) => { if (v == null) return; s += '<circle cx="' + X(i) + '" cy="' + Y(v) + '" r="4.2" fill="#fff" stroke="' + c + '" stroke-width="2.4"><title>' + esc(se.name + ' ' + labels[i] + ': ' + fmt(v)) + '</title></circle><text x="' + X(i) + '" y="' + (Y(v) - 9) + '" font-size="10.5" text-anchor="middle" fill="#444">' + fmt(v, o.d == null ? 1 : o.d) + '</text>'; });
+  });
+  return '<div class="chart">' + s + '</svg>' + legend(series) + '</div>';
+}
+function chartScatter(pts, o) {
+  o = o || {}; const W = 680, H = 300, L = 48, R = 16, T = 14, B = 42, pw = W - L - R, ph = H - T - B;
+  if (!pts.length) return '<div class="empty">ข้อมูลไม่พอ</div>';
+  const xs = pts.map(p => p.x), ys = pts.map(p => p.y); let x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  if (x0 === x1) { x0 -= 1; x1 += 1; } if (y0 === y1) { y0 -= 1; y1 += 1; } const px = (x1 - x0) * .1, py = (y1 - y0) * .12; x0 -= px; x1 += px; y0 -= py; y1 += py;
+  const X = v => L + pw * (v - x0) / (x1 - x0), Y = v => T + ph - ph * (v - y0) / (y1 - y0);
+  let s = '<svg viewBox="0 0 ' + W + ' ' + H + '">';
+  if (o.hx != null && o.hx > x0 && o.hx < x1) s += '<line x1="' + X(o.hx) + '" x2="' + X(o.hx) + '" y1="' + T + '" y2="' + (T + ph) + '" stroke="#e8d5d5" stroke-dasharray="4 4"/>';
+  if (y0 < 0 && y1 > 0) s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + Y(0) + '" y2="' + Y(0) + '" stroke="#16a34a" stroke-dasharray="5 4"/>';
+  s += '<rect x="' + L + '" y="' + T + '" width="' + pw + '" height="' + ph + '" fill="none" stroke="#f1e5e5"/>';
+  pts.forEach((p, i) => { s += '<circle cx="' + X(p.x) + '" cy="' + Y(p.y) + '" r="6" fill="' + (p.c || '#dc2626') + '" fill-opacity=".78" stroke="#fff" stroke-width="1.5" style="transform-origin:' + X(p.x) + 'px ' + Y(p.y) + 'px;animation:dot .5s ease both;animation-delay:' + Math.min(i * 18, 500) + 'ms"><title>' + esc(p.t) + '</title></circle>'; });
+  s += '<text x="' + (L + pw / 2) + '" y="' + (H - 6) + '" text-anchor="middle" font-size="12" fill="#5b6270">' + esc(o.xl || '') + '</text><text transform="translate(13 ' + (T + ph / 2) + ') rotate(-90)" text-anchor="middle" font-size="12" fill="#5b6270">' + esc(o.yl || '') + '</text>';
+  s += '<text x="' + L + '" y="' + (H - 24) + '" font-size="11" fill="#8a8f98">' + fmt(x0, 1) + '</text><text x="' + (W - R) + '" y="' + (H - 24) + '" font-size="11" text-anchor="end" fill="#8a8f98">' + fmt(x1, 1) + '</text>';
+  return '<div class="chart">' + s + '</svg></div>';
+}
+function hbars(rows, o) { // [{label,val,txt,color}]
+  o = o || {}; const mx = o.max || Math.max(...rows.map(r => Math.abs(r.val || 0)), 0.0001);
+  return rows.map((r, i) => '<div class="hb"><span title="' + esc(r.label) + '" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(r.label) + '</span><div class="bar"><i style="width:' + Math.max(2, Math.abs(r.val || 0) / mx * 100) + '%;animation-delay:' + Math.min(i * 30, 400) + 'ms;' + (r.color ? 'background:' + r.color : '') + '"></i></div><span class="v">' + esc(r.txt != null ? r.txt : fmt(r.val)) + '</span></div>').join('');
+}
+const styleAnim = document.createElement('style');
+styleAnim.textContent = '@keyframes barUp{from{transform:scaleY(0)}}@keyframes draw{to{stroke-dashoffset:0}}@keyframes dot{from{transform:scale(0);opacity:0}}';
+document.head.appendChild(styleAnim);
+
+/* ---------- ตาราง/ป้าย ---------- */
+function tbl(head, rows, o) { // head:[{h,cls}] หรือ string ; rows: array of array (HTML ได้)
+  o = o || {};
+  return '<div class="tw"><table class="t ' + (o.cls || '') + '"><thead><tr>' + head.map(h => typeof h === 'string' ? '<th>' + h + '</th>' : '<th class="' + (h.c || '') + '">' + h.h + '</th>').join('') + '</tr></thead><tbody>' +
+    (rows.length ? rows.map(r => '<tr>' + r.map((c, i) => { const h = head[i]; return '<td class="' + ((h && h.c) || '') + '">' + (c == null ? '' : c) + '</td>'; }).join('') + '</tr>').join('') : '<tr><td colspan="' + head.length + '" class="c muted">ไม่มีข้อมูล</td></tr>') + '</tbody></table></div>';
+}
+const bdg = (t, k) => '<span class="bdg ' + (k || 'n') + '">' + esc(t) + '</span>';
+const dfx = d => d == null ? '–' : '<span class="' + (d > 0 ? 'pos' : d < 0 ? 'neg' : '') + '">' + sgn(d) + '</span>';
+const empty = (m, act) => '<div class="empty">' + (m || 'ยังไม่มีข้อมูล') + (act ? '<div style="margin-top:12px">' + act + '</div>' : '') + '</div>';
+
+/* ---------- Export: พิมพ์/PDF • Word • CSV (ทุกไฟล์มีเครดิตผู้ออกแบบ/ผู้พัฒนา) ---------- */
+function creditLines() { return [CREDIT_DESIGN, CREDIT_DEV]; }
+function docTitle() { return (($('#top h2') || {}).textContent || 'รายงาน') + (SIM ? ' [ข้อมูลจำลอง]' : ''); }
+function headerHtml() {
+  const S = getSettings();
+  return '<div class="print-head"><img src="' + esc(logoSrc()) + '"/><div><b>' + esc(S.title) + '</b><span>' + esc(S.org) + ' • ' + esc(docTitle()) + ' • พิมพ์เมื่อ ' + new Date().toLocaleString('th-TH') + '</span></div></div>';
+}
+function printPage() {
+  let h = $('#printHead'); if (!h) { h = document.createElement('div'); h.id = 'printHead'; $('#view').prepend(h); }
+  h.innerHTML = headerHtml();
+  let f = $('#printFoot'); if (!f) { f = document.createElement('div'); f.id = 'printFoot'; $('#view').appendChild(f); }
+  f.className = 'print-foot'; f.innerHTML = creditLines().map(esc).join(' &nbsp;|&nbsp; ') + '<br/>' + esc(getSettings().title) + ' v' + APP_VERSION;
+  $$('.reveal').forEach(e => e.classList.add('in'));
+  setTimeout(() => window.print(), 80);
+}
+function downloadBlob(name, type, content) {
+  const b = new Blob([content], { type: type }), a = document.createElement('a');
+  a.href = URL.createObjectURL(b); a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 600);
+}
+function safeName(s) { return String(s).replace(/[\\/:*?"<>|\s]+/g, '_').slice(0, 60); }
+function exportWord() {
+  const v = $('#view').cloneNode(true);
+  $$('button,.btn,.tabs,.noprint,select,input,textarea,#printHead,#printFoot,svg', v).forEach(e => { if (e.tagName === 'SELECT') { e.replaceWith(document.createTextNode(e.options[e.selectedIndex] ? e.options[e.selectedIndex].text : '')); } else e.remove(); });
+  $$('.reveal', v).forEach(e => e.classList.remove('reveal'));
+  const S = getSettings(), css = 'body{font-family:"TH SarabunPSK","Sarabun",Tahoma,sans-serif;font-size:15pt}table{border-collapse:collapse;width:100%;margin:6pt 0}th,td{border:1px solid #999;padding:3pt 6pt;font-size:13pt}th{background:#fde8e8}h1,h2,h3{color:#991b1b}.card{margin-bottom:10pt}.bdg{font-weight:bold}';
+  const html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>' + esc(docTitle()) + '</title><style>' + css + '</style></head><body>' +
+    '<table style="border:0"><tr><td style="border:0;width:60pt"><img src="' + esc(logoSrc()) + '" width="56" height="56"/></td><td style="border:0"><b style="font-size:17pt">' + esc(S.title) + '</b><br/>' + esc(S.org) + ' — ' + esc(docTitle()) + '<br/><small>วันที่ออกรายงาน ' + new Date().toLocaleDateString('th-TH', { dateStyle: 'long' }) + '</small></td></tr></table><hr/>' +
+    v.innerHTML + '<hr/><p style="text-align:center;font-size:12pt;color:#555">' + creditLines().map(esc).join('<br/>') + '</p></body></html>';
+  downloadBlob(safeName(docTitle()) + '.doc', 'application/msword;charset=utf-8', '﻿' + html);
+  toast('ส่งออกไฟล์ Word แล้ว', 'ok');
+}
+function exportCsv() {
+  const tabs = $$('#view table.t'); if (!tabs.length) { toast('หน้านี้ไม่มีตารางให้ส่งออก', 'er'); return; }
+  const q = s => '"' + String(s).replace(/"/g, '""').replace(/\s+/g, ' ').trim() + '"';
+  let out = [q(getSettings().title), q(docTitle()), q('วันที่ออกรายงาน ' + new Date().toLocaleDateString('th-TH', { dateStyle: 'long' })), ''];
+  tabs.forEach((t, i) => {
+    const h = t.closest('.card'); const cap = h && $('h3', h); if (cap) out.push(q(cap.textContent));
+    $$('tr', t).forEach(r => out.push($$('th,td', r).map(c => q(c.innerText || c.textContent)).join(',')));
+    out.push('');
+  });
+  out.push(q(CREDIT_DESIGN), q(CREDIT_DEV));
+  downloadBlob(safeName(docTitle()) + '.csv', 'text/csv;charset=utf-8', '﻿' + out.join('\r\n'));
+  toast('ส่งออก CSV แล้ว', 'ok');
+}
+function exportMenu() {
+  return '<span class="noprint" style="display:inline-flex;gap:6px"><button class="btn sm" onclick="printPage()" title="พิมพ์ / บันทึกเป็น PDF">🖨 พิมพ์/PDF</button><button class="btn sm" onclick="exportWord()">📄 Word</button><button class="btn sm" onclick="exportCsv()">📊 CSV</button></span>';
+}
+
+/* ===================== ANALYSIS: settings / index / aggregates / simulation ===================== */
+const DEF = { title: 'ระบบสารสนเทศวิเคราะห์ผลสัมฤทธิ์ทางการเรียนและผลการทดสอบระดับชาติ', short: 'Sisaket PAO Education Analytics', org: 'องค์การบริหารส่วนจังหวัดศรีสะเกษ', total: 39, band: 1, accHi: 2.9, accMid: 2.5, stdA: 50, stdB: 60, stdC: 75, hiAcad: 3.0, logo: '', labelMap: {} };
+const getSettings = () => Object.assign({}, DEF, col('settings').app || {});
+const DEFAULT_LOGO = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fb7185"/><stop offset=".55" stop-color="#dc2626"/><stop offset="1" stop-color="#9f1239"/></linearGradient></defs><rect width="96" height="96" rx="22" fill="url(#g)"/><g fill="#fff"><rect x="21" y="52" width="12" height="23" rx="3" opacity=".85"/><rect x="42" y="38" width="12" height="37" rx="3"/><rect x="63" y="22" width="12" height="53" rx="3" opacity=".92"/></g><path d="M20 38 L40 26 L56 32 L76 14" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/></svg>');
+const logoSrc = () => getSettings().logo || DEFAULT_LOGO;
+const fixLabel = s => (getSettings().labelMap || {})[s] || s;
+
+const SUBJ_NAME = { TH: 'ภาษาไทย', MA: 'คณิตศาสตร์', SC: 'วิทยาศาสตร์', EN: 'ภาษาอังกฤษ', SO: 'สังคมศึกษาฯ' };
+const SUBJ_ORDER = ['TH', 'MA', 'SC', 'EN', 'SO'];
+const GROUPS = [{ k: 'ภาษาไทย', cn: 'TH' }, { k: 'คณิตศาสตร์', cn: 'MA' }, { k: 'วิทยาศาสตร์และเทคโนโลยี', cn: 'SC' }, { k: 'สังคมศึกษา ศาสนาและวัฒนธรรม', cn: 'SO' }, { k: 'สุขศึกษาและพลศึกษา' }, { k: 'ศิลปะ' }, { k: 'การงานอาชีพ' }, { k: 'ภาษาต่างประเทศ', cn: 'EN' }];
+const GRADES = [0, 1, 1.5, 2, 2.5, 3, 3.5, 4];
+const LEVEL_NAME = { M3: 'ม.3', M6: 'ม.6', P6: 'ป.6' };
+const sName = c => { const s = col('schools')[c]; return s ? fixLabel(s.name || c) : String(c); };
+
+function colorOf(d) { const b = getSettings().band; return d == null ? { k: 'n', t: '–' } : d >= b ? { k: 'g', t: 'สูงกว่าประเทศ' } : d <= -b ? { k: 'r', t: 'ต่ำกว่าประเทศ' } : { k: 'y', t: 'ใกล้เคียง' }; }
+function accLabel(m) { const S = getSettings(); return m == null ? ['–', 'n'] : m >= S.accHi ? ['จุดแข็ง', 'g'] : m >= S.accMid ? ['ควรพัฒนา', 'y'] : ['เร่งพัฒนา', 'r']; }
+function stdLabel(p) { const S = getSettings(); return p == null ? ['–', 'n'] : p < S.stdA ? ['เร่งพัฒนา', 'r'] : p < S.stdB ? ['ควรพัฒนา', 'y'] : p < S.stdC ? ['ปานกลาง', 'b'] : ['ดี', 'g']; }
+const lbBdg = a => bdg(a[0], a[1]);
+const colBdg = d => { const c = colorOf(d); return bdg(c.t, c.k); };
+
+/* ---------- ดัชนีข้อมูล ---------- */
+let IDX = null;
+function onDataChanged() { IDX = null; }
+function acadStat(r) {
+  if (r.c && r.c.length === 8) { const n = sum(r.c); return { n, mean: n ? sum(r.c.map((x, i) => x * GRADES[i])) / n : null, pass: n ? (n - r.c[0]) / n * 100 : null, fail: r.c[0], p3: n ? (r.c[5] + r.c[6] + r.c[7]) / n * 100 : null }; }
+  const n = r.n || 0; return { n, mean: r.mean, pass: r.pass, fail: (r.pass != null && n) ? Math.round(n * (100 - r.pass) / 100) : null, p3: r.p3 };
+}
+function idx() {
+  if (IDX) return IDX;
+  const onet = Object.values(col('onet')).map(r => Object.assign({ cn: OnetParser.CANON[r.c] || r.c }, r));
+  const acad = Object.values(col('acad')).map(r => Object.assign({ st: acadStat(r) }, r));
+  const years = [...new Set(onet.map(r => +r.y).concat(acad.map(r => +r.y)))].filter(Boolean).sort((a, b) => a - b);
+  const levels = [...new Set(onet.map(r => r.l))].sort();
+  IDX = { onet, acad, years, levels, schools: Object.values(col('schools')).sort((a, b) => sName(a.code).localeCompare(sName(b.code), 'th')) };
+  return IDX;
+}
+const latestYear = () => { const y = idx().years; return y.length ? y[y.length - 1] : null; };
+const yearsOf = (l) => [...new Set(idx().onet.filter(r => !l || r.l === l).map(r => +r.y))].sort((a, b) => a - b);
+
+/* ---------- O-NET aggregates ---------- */
+function subjRecs(y, l, cn) { return idx().onet.filter(r => +r.y === +y && r.l === l && r.cn === cn && r.lv && r.lv.sch && r.lv.sch[1] != null); }
+function aggSubject(y, l, cn) {
+  const rs = subjRecs(y, l, cn); if (!rs.length) return null;
+  const ref = k => { const r = rs.find(r => r.lv[k] && r.lv[k][1] != null); return r ? r.lv[k][1] : null; };
+  const rows = rs.map(r => { const m = r.lv.sch[1], nt = r.lv.nat ? r.lv.nat[1] : null; return { s: r.s, name: sName(r.s), n: r.lv.sch[0] || 0, m, nat: nt, prov: r.lv.prov ? r.lv.prov[1] : null, dept: r.lv.dept ? r.lv.dept[1] : null, diff: (m != null && nt != null) ? m - nt : null, rec: r }; });
+  const mean = wavg(rows, r => r.m, r => r.n), nat = ref('nat');
+  const cnt = { g: 0, y: 0, r: 0 }; rows.forEach(r => { if (r.diff != null) cnt[colorOf(r.diff).k]++; });
+  return { cn, n: sum(rows.map(r => r.n)), mean, nat, prov: ref('prov'), dept: ref('dept'), diff: (mean != null && nat != null) ? mean - nat : null, rows, cnt, schools: rows.length };
+}
+const stdSort = (a, b) => { const f = s => { const m = s.match(/(\d+)\.(\d+)/); return m ? +m[1] * 100 + +m[2] : 0; }; return f(a) - f(b); };
+function stdAgg(y, l, cn) {
+  const map = {};
+  subjRecs(y, l, cn).filter(r => r.std).forEach(r => Object.keys(r.std).forEach(k => { const a = r.std[k]; if (a[1] == null || a[13] == null) return; (map[k] = map[k] || []).push({ s: r.s, w: r.lv.sch[0] || 1, m: a[1], nat: a[13], prov: a[7], diff: a[1] - a[13] }); }));
+  return Object.keys(map).sort(stdSort).map(k => { const L = map[k]; return { k, rows: L, m: wavg(L, x => x.m, x => x.w), nat: avg(L.map(x => x.nat)), prov: avg(L.map(x => x.prov)), diff: wavg(L, x => x.diff, x => x.w), below: L.filter(x => x.diff < 0).length, n: L.length }; });
+}
+function schoolStd(y, l, cn, s) { const r = idx().onet.find(r => +r.y === +y && r.l === l && r.cn === cn && r.s === s); if (!r || !r.std) return []; return Object.keys(r.std).sort(stdSort).map(k => { const a = r.std[k]; return { k, m: a[1], nat: a[13], prov: a[7], diff: (a[1] != null && a[13] != null) ? a[1] - a[13] : null }; }); }
+function schoolRec(y, l, cn, s) { return idx().onet.find(r => +r.y === +y && r.l === l && r.cn === cn && r.s === s); }
+function trendOf(s, l, cn) { // s=null → ทั้งสังกัด
+  return yearsOf(l).map(y => {
+    if (s) { const r = schoolRec(y, l, cn, s); if (!r || !r.lv.sch) return { y, m: null, nat: null, diff: null }; const m = r.lv.sch[1], nt = r.lv.nat ? r.lv.nat[1] : null; return { y, m, nat: nt, diff: (m != null && nt != null) ? m - nt : null, n: r.lv.sch[0] }; }
+    const a = aggSubject(y, l, cn); return a ? { y, m: a.mean, nat: a.nat, diff: a.diff, n: a.n } : { y, m: null, nat: null, diff: null };
+  });
+}
+function trendFlags(tr) {
+  const v = tr.filter(t => t.m != null), f = [];
+  if (v.length >= 2) { const d = v[v.length - 1].m - v[v.length - 2].m; f.push(Math.abs(d) < .5 ? ['คะแนนคงที่', 'y'] : d > 0 ? ['คะแนนเพิ่มขึ้น', 'g'] : ['คะแนนลดลง', 'r']); }
+  const dd = v.filter(t => t.diff != null);
+  if (dd.length >= 2 && dd.every(t => t.diff > 0)) f.push(['สูงกว่าระดับประเทศต่อเนื่อง', 'g']);
+  if (dd.length >= 2 && dd.every(t => t.diff < 0)) f.push(['ต่ำกว่าระดับประเทศต่อเนื่อง', 'r']);
+  return f;
+}
+
+/* ---------- ผลสัมฤทธิ์ทางการเรียน ---------- */
+function acadRows(y, o) { o = o || {}; return idx().acad.filter(r => (y == null || +r.y === +y) && (!o.s || r.s === o.s) && (!o.g || r.g === o.g)); }
+function acadAgg(rows) {
+  const w = rows.filter(r => r.st && r.st.n > 0 && r.st.mean != null); if (!w.length) return null;
+  const n = sum(w.map(r => r.st.n));
+  return { n, mean: wavg(w, r => r.st.mean, r => r.st.n), pass: wavg(w, r => r.st.pass, r => r.st.n), p3: wavg(w, r => r.st.p3, r => r.st.n), fail: sum(w.map(r => r.st.fail || 0)), schools: new Set(w.map(r => r.s)).size };
+}
+const groupAgg = (y, g) => acadAgg(acadRows(y, { g }));
+function submittedSchools(y) { const s = new Set(); idx().onet.forEach(r => { if (+r.y === +y) s.add(r.s); }); idx().acad.forEach(r => { if (+r.y === +y) s.add(r.s); }); return s; }
+// ภาพรวมรายโรงเรียน
+function schoolProfile(y, l, s) {
+  const out = { s, subj: {}, strengths: [], weak: [] };
+  SUBJ_ORDER.forEach(cn => { const r = schoolRec(y, l, cn, s); if (r && r.lv.sch && r.lv.nat) out.subj[cn] = { m: r.lv.sch[1], nat: r.lv.nat[1], diff: r.lv.sch[1] - r.lv.nat[1] }; });
+  const e = Object.keys(out.subj).sort((a, b) => out.subj[b].diff - out.subj[a].diff);
+  out.best = e[0] || null; out.worst = e.length > 1 ? e[e.length - 1] : null;
+  out.below = e.filter(k => out.subj[k].diff <= -getSettings().band).length; out.above = e.filter(k => out.subj[k].diff >= getSettings().band).length;
+  out.totalDiff = e.length ? sum(e.map(k => out.subj[k].diff)) : null;
+  return out;
+}
+function pearson(a, b) { const n = a.length; if (n < 3) return null; const ma = avg(a), mb = avg(b); let sab = 0, saa = 0, sbb = 0; for (let i = 0; i < n; i++) { sab += (a[i] - ma) * (b[i] - mb); saa += (a[i] - ma) ** 2; sbb += (b[i] - mb) ** 2; } return saa && sbb ? sab / Math.sqrt(saa * sbb) : null; }
+
+/* ===================== โหมดจำลองข้อมูลเสมือนจริง (อยู่ในหน่วยความจำ ไม่เขียนฐานข้อมูลจริง) ===================== */
+const DEMO_REF = {"M3":{"TH":{"std":{"\u0e171.1":[100,66.11,18.42,49.85,22.42,51.35,21.69,51.8,21.92,52.79,22.05,52.65,22.59,55.05,22.82],"\u0e172.1":[100,40.59,11.28,40.13,20.72,43.6,20.83,44.15,20.95,43.65,20.84,43.57,21.19,45.79,20.97],"\u0e173.1":[100,47.5,32.5,48.75,28.13,53.02,27.17,53.54,27.19,51.72,28.33,52.94,28.4,54.4,28.39],"\u0e174.1":[100,32.68,14.28,37.27,16.5,38.07,16.85,38.39,17.17,38,17.06,38.43,17.36,39.29,17.58],"\u0e175.1":[100,45,28.43,41.89,30.07,46.51,31.21,46.99,31.47,44.65,30.54,44.77,30.82,46.57,31.04]},"lv":{"sch":[20,45.73,8.1,57.23,29.87,45.67,null],"size":[76393,42.68,15.6,93.28,0,42.73,18.29],"loc":[9361,45.47,15.48,91.28,3.74,45.85,20.65],"prov":[11546,45.96,15.81,96.64,3.74,46.38,25.37],"dept":[31691,45.53,15.66,95.64,0,45.96,23.01],"reg":[166138,45.66,16.21,96.64,0,45.92,20.65],"nat":[552410,47.6,16.34,98,0,48.2,20.65]}},"EN":{"std":{"\u0e151.1":[100,23.33,12.53,25.68,13.91,26.34,14.27,27.1,15.07,27.88,15.94,27.65,15.73,29.39,17.07],"\u0e151.2":[100,27.14,16.23,31.11,20.06,30.56,19.9,31.78,20.94,34.79,22.76,33.82,22.24,37.07,24.41],"\u0e151.3":[100,21.43,14.64,27.91,18.02,28.93,18.31,29.62,18.95,30.65,19.79,30.08,19.58,32.33,21.2],"\u0e152.1":[100,23.33,23.8,28.72,26.6,28.49,26.8,29.31,27.12,32.34,28.17,31.46,28.26,33.7,28.87],"\u0e152.2":[100,28.33,19.08,28.9,26.33,28.29,26.24,28.96,26.69,31.14,27.62,30.62,27.47,33.03,28.63]},"lv":{"sch":[20,24.22,7.77,43.75,12.5,25,18.75],"size":[76375,27.94,10.69,100,0,28.13,25],"loc":[9353,28.21,10.96,100,3.13,28.13,25],"prov":[11539,29.06,12.09,100,3.13,28.13,25],"dept":[31657,30.72,13.47,100,0,28.13,25],"reg":[165826,30.17,13.25,100,0,28.13,25],"nat":[551597,32.46,15.26,100,0,28.13,25]}},"MA":{"std":{"\u0e041.1":[100,9.19,14.04,19.89,22.43,21.95,23.15,23.13,24.12,21.52,23.69,23.03,24.71,24.06,25.43],"\u0e041.2":[100,25,25,26.38,31.15,26.28,30.77,27.08,31.34,27.35,31.71,28.21,32.12,29.09,32.53],"\u0e041.3":[100,29.7,16.88,23.21,19.98,24.37,21.08,25.33,22.25,25.74,21.91,26.73,22.77,28.54,23.98],"\u0e042.1":[100,27.5,29.47,25.62,31.1,23.59,30.16,23.69,30.27,27.07,31.76,27.23,32.05,27.49,32.34],"\u0e042.2":[100,15.2,12.89,25.54,18.96,25.91,19.23,26.89,20.06,27.33,20.19,27.49,20.88,29.17,21.75],"\u0e043.1":[100,11.05,19.13,15.48,23.2,14.79,22.95,15.25,23.96,16.54,24.68,17.29,25.54,17.86,26.18],"\u0e043.2":[100,15,35.71,25.93,43.83,23.14,42.17,23.4,42.34,28.1,44.95,26.81,44.3,28.7,45.23]},"lv":{"sch":[20,19.54,8.19,34.5,0,23.75,23.75],"size":[76202,23.11,11.02,100,0,23.75,19],"loc":[9329,23.4,11.66,95.25,0,23.75,19],"prov":[11508,24.21,13.12,100,0,23.75,19],"dept":[31613,24.89,12.94,100,0,23.75,19],"reg":[165450,25.53,14.07,100,0,23.75,19],"nat":[550945,26.81,15.15,100,0,23.75,19]}},"SC":{"std":{"\u0e271.1":[100,0,0,11.72,32.17,10.94,31.21,11.41,31.79,11.55,31.96,13.14,33.78,14.53,35.24],"\u0e271.2":[100,21,17.29,31.59,21.81,35.1,22.43,35.38,22.64,32.8,22.13,33.29,22.6,33.95,22.64],"\u0e271.3":[100,41.18,16.48,34.71,25.18,35.67,25.41,36.2,25.74,35.47,25.46,36.3,25.79,36.69,25.92],"\u0e272.1":[100,27,17.06,28.04,21.58,32.07,23.11,33.24,23.76,29.98,22.64,30.32,22.65,31.62,23.32],"\u0e272.2":[100,35,17.75,32.47,21.93,30.23,21.19,30.26,21.2,33.56,22.31,33.19,22.51,34.08,22.79],"\u0e272.3":[100,33.42,18.02,30.72,19.47,29.72,19.58,29.97,19.57,31.15,19.87,31.83,20.17,32.18,20.26],"\u0e273.1":[100,70,33.17,33.95,33.95,38.69,35.09,38.87,35.23,36.6,34.61,37.79,34.93,38.02,35.05],"\u0e273.2":[100,24.83,15.6,29.75,19.43,29.67,19.36,30.16,19.59,30.66,19.82,31.02,20.03,31.62,20.18],"\u0e274.1":[100,40,20,41.31,34.9,41.46,34.51,42.11,34.69,44.7,35.26,44.47,34.87,46.37,35.29],"\u0e274.2":[100,15,27.84,34.57,34.68,36.36,35.75,37.16,36.09,37.34,35.61,36.78,35.39,39.19,36.23]},"lv":{"sch":[20,30.94,6.65,45.25,18.5,29.13,39.75],"size":[76377,31.4,9.57,88.5,0,30.75,28.75],"loc":[9360,32.4,9.31,82.25,4,31.5,31.5],"prov":[11545,32.87,9.79,87,4,32.25,31.5],"dept":[31668,32.73,10.05,89.75,0,31.5,31.5],"reg":[166037,33.09,10.59,98,0,32,28.75],"nat":[551936,33.95,10.96,98,0,32.75,31.5]}}},"M6":{"TH":{"lv":{"sch":[19,34.76,8,52,20.8,33,null],"size":[19070,35.77,12.09,80.9,5.6,35,29.8],"loc":[516,38.32,14.4,81.9,7,37.1,22.2],"prov":[4579,38.13,12.49,81.9,3.5,37.2,35],"dept":[12592,39.31,12.92,88.9,6.2,38.6,41.6],"reg":[75084,39.59,13.11,88.9,3.5,38.8,37.1],"nat":[229240,40.32,13.51,92,0,39.6,37.1]}},"SO":{"lv":{"sch":[19,28.47,4.2,35.25,18.5,28.75,30.75],"size":[19003,34.15,11.27,97,4.5,33,27.75],"loc":[453,35.67,10.91,78,12.5,35.25,29.25],"prov":[4436,35.55,9.41,94,7.5,35.5,32.5],"dept":[12340,36.67,12.25,97,6,35.5,34],"reg":[72544,36.61,11.46,97,7.5,35.75,34],"nat":[223303,36.96,11.27,98.5,1.75,36.25,40.25]}},"EN":{"lv":{"sch":[19,17.29,5.27,29,10,16.5,16.5],"size":[19020,23.26,14.56,100,0,19,16],"loc":[469,29.42,21.47,96.5,5,21,18.5],"prov":[4478,24.39,15.74,100,2,19.5,17.5],"dept":[12380,27.94,18.76,100,0,21,17.5],"reg":[73172,27.74,18.78,100,0,21,17.5],"nat":[224709,30.15,20.65,100,0,22,17.5]}},"MA":{"lv":{"sch":[19,18.29,8.35,41.25,3.75,18.75,15],"size":[18883,18.92,10.59,100,0,18.75,15],"loc":[509,20.66,13.97,100,0,18.75,15],"prov":[4489,18.82,9.67,100,0,18.75,15],"dept":[12474,20.51,11.85,96.25,0,18.75,15],"reg":[74186,20.38,12.17,100,0,18.75,15],"nat":[227005,21,13.06,100,0,18.75,15]}},"SC":{"lv":{"sch":[19,24.73,6.42,39.4,12,24.4,22],"size":[19042,30.68,10.56,95.2,4.8,29.4,26.8],"loc":[469,32.7,9.68,75.6,7.4,31.8,27],"prov":[4470,31.46,9.16,78.2,7.2,31.6,24.4],"dept":[12389,32.34,11.55,95.2,4.8,31.4,29.4],"reg":[73350,31.98,11.03,97.6,2.4,31.4,29.4],"nat":[225107,31.99,10.86,97.6,2.4,31.4,31.8]}}}};
+function mulberry(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function makeSim(seed) {
+  const R = mulberry(seed || 20260101), G = (m, s) => { let u = 0, v = 0; while (!u) u = R(); v = R(); return m + s * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+  const clip = (v, a, b) => Math.max(a, Math.min(b, v)), r2 = v => Math.round(v * 100) / 100;
+  const names = ['กระดุมทองวิทยา', 'ผักแพววิทยา', 'กันทรอมวิทยาคม', 'บึงบูรพ์วิทยา', 'ขุนหาญวิทยาคม', 'ไพรบึงวิทยา', 'ภูสิงห์วิทยา', 'ห้วยทับทันวิทยา', 'ราษีไศลวิทยาคม', 'อุทุมพรพิสัยวิทยา', 'ศรีรัตนะวิทยา', 'โนนคูณวิทยา', 'พยุห์วิทยาคม', 'ยางชุมน้อยวิทยา', 'เมืองจันทร์วิทยา', 'วังหินวิทยาคม', 'น้ำเกลี้ยงวิทยา', 'เบญจลักษ์วิทยา', 'ปรางค์กู่วิทยา', 'ศิลาลาดวิทยา', 'โพธิ์ศรีสุวรรณวิทยา', 'กันทรลักษ์วิทยาคม', 'ทุ่งไชยวิทยา', 'ลำภูวิทยา', 'หนองหญ้าลาดวิทยา', 'นาโพธิ์วิทยา', 'ดงรัตน์วิทยา', 'บ้านแทรงวิทยา', 'จานแสนไชยวิทยา', 'ดูนสาดวิทยา', 'ตูมใหญ่วิทยา', 'พิมายวิทยานุสรณ์', 'สร้างปี่วิทยา', 'ก้านเหลืองวิทยา', 'หัวช้างวิทยา', 'ละลมวิทยา', 'ตระการวิทยา', 'ขนุนวิทยา', 'ทุ่งสว่างวิทยา'];
+  const out = { schools: {}, onet: {}, acad: {}, improve: {}, settings: {} };
+  const years = [2566, 2567, 2568];
+  const yOff = {}; years.forEach(y => { yOff[y] = {}; ['TH', 'MA', 'SC', 'EN', 'SO'].forEach(cn => yOff[y][cn] = y === 2568 ? 0 : G(0.4 * (2568 - y), 1.1)); });
+  const subjByLevel = { M3: ['TH', 'MA', 'SC', 'EN'], M6: ['TH', 'SO', 'EN', 'MA', 'SC'] };
+  const code2 = { M3: { TH: '91', MA: '94', SC: '95', EN: '93', SO: '92' }, M6: { TH: '01', MA: '04', SC: '05', EN: '03', SO: '02' } };
+  const gAcad = { 'ภาษาไทย': 2.85, 'คณิตศาสตร์': 2.45, 'วิทยาศาสตร์และเทคโนโลยี': 2.9, 'สังคมศึกษา ศาสนาและวัฒนธรรม': 3.05, 'สุขศึกษาและพลศึกษา': 3.25, 'ศิลปะ': 3.3, 'การงานอาชีพ': 3.15, 'ภาษาต่างประเทศ': 2.6 };
+  const cdf = z => { const t = 1 / (1 + .2316419 * Math.abs(z)), d = .3989423 * Math.exp(-z * z / 2), p = d * t * (.3193815 + t * (-.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274)))); return z > 0 ? 1 - p : p; };
+  names.forEach((nm, i) => {
+    const code = '30331001' + String(i + 1).padStart(2, '0'), size = i % 5 === 0 ? 'กลาง' : i % 9 === 0 ? 'ใหญ่' : 'เล็ก';
+    const stu = Math.round(size === 'ใหญ่' ? G(900, 150) : size === 'กลาง' ? G(500, 90) : G(210, 70)), stuC = clip(stu, 60, 1500);
+    out.schools[code] = { code, name: 'โรงเรียน' + nm, size, loc: i % 4 === 0 ? 'ในเมือง' : 'นอกเมือง', students: stuC, teachers: Math.round(stuC / 17 + G(2, 1)), levels: 'ม.1–ม.6' };
+    const eS = G(-1.4, 3.1), eSub = {}, tr = G(0.15, 0.7), acEff = 0.035 * eS + G(0, 0.2);
+    ['TH', 'MA', 'SC', 'EN', 'SO'].forEach(cn => eSub[cn] = G(0, 2.1));
+    ['M3', 'M6'].forEach(l => {
+      const nn = Math.round(clip(stuC / (l === 'M3' ? 3.3 : 4.4) * (l === 'M6' ? .8 : 1), 12, 260));
+      years.forEach(y => subjByLevel[l].forEach(cn => {
+        const ref = (DEMO_REF[l] || {})[cn]; if (!ref) return;
+        const off = yOff[y][cn], key = code + '|' + y + '|' + l + '|' + code2[l][cn];
+        const natM = ref.lv.nat[1] + off, mk = k => { const a = ref.lv[k].slice(); a[1] = r2(a[1] + off + (k === 'size' ? G(0, .4) : 0)); return a; };
+        const sm = clip(natM + eS * 1 + eSub[cn] + tr * (y - 2568) + G(0, 1.3), 4, 92), sd = r2(ref.lv.nat[2] * .78 * clip(G(1, .12), .6, 1.3));
+        const sch = [nn, r2(sm), sd, r2(clip(sm + sd * 2.4, 10, 100)), r2(clip(sm - sd * 2.2, 0, 60)), r2(sm - G(.6, .5)), null];
+        const lv = { sch, size: mk('size'), loc: mk('loc'), prov: mk('prov'), dept: mk('dept'), reg: mk('reg'), nat: mk('nat') };
+        const rec = { s: code, y, l, c: code2[l][cn], lv };
+        if (ref.std) { rec.std = {}; Object.keys(ref.std).forEach(k => { const b = ref.std[k], nt = b[13] + off, v = clip(nt + eS * .9 + eSub[cn] * .9 + G(0, 4.5), 3, 96), sdv = r2(clip(b[2] * 1.1 + G(0, 3), 8, 38)); const arr = b.slice(); arr[1] = r2(v); arr[2] = sdv; [3, 5, 7, 9, 11, 13].forEach(ix => arr[ix] = r2(b[ix] + off + G(0, .25))); rec.std[k] = arr; }); }
+        const bins = []; for (let b = 0; b < 10; b++) bins.push(Math.max(0, Math.round(nn * (cdf((10 * (b + 1) - sm) / sd) - cdf((10 * b - sm) / sd))))); bins.push(0);
+        const diff = nn - sum(bins); const mi = bins.indexOf(Math.max(...bins)); bins[mi] += diff; bins.push(nn); rec.dist = bins;
+        out.onet[key] = rec;
+      }));
+    });
+    years.forEach(y => GROUPS.forEach(g => {
+      const mu = clip(gAcad[g.k] + acEff + 0.03 * (y - 2568) + G(0, .12) + (g.cn && g.cn !== 'SO' ? 0.02 * eSub[g.cn] : 0), 1.6, 3.8), n = clip(stuC + Math.round(G(0, 8)), 40, 1600);
+      const w = GRADES.map(gr => Math.exp(-((gr - mu) ** 2) / (2 * .85 * .85)) * (gr === 0 ? .55 : 1)), tw = sum(w), raw = w.map(x => x / tw * n), c = raw.map(Math.floor); let rem = n - sum(c);
+      raw.map((x, ix) => [x - Math.floor(x), ix]).sort((a, b) => b[0] - a[0]).forEach(p => { if (rem > 0) { c[p[1]]++; rem--; } });
+      out.acad[code + '|' + y + '|' + g.k] = { s: code, y, g: g.k, c };
+    }));
+  });
+  const L = Object.keys(out.schools), pick = i => L[i % L.length];
+  [['การอ่านและการคิดคำนวณต่ำกว่าค่าเฉลี่ยประเทศ', 'อบรมครูด้านการจัดการเรียนรู้เพื่อส่งเสริมการอ่าน', 'อบรม', 'นิเทศชั้นเรียน', 'ดำเนินการ', 24, 18], ['คะแนนด้านการคิดคำนวณต่ำ', 'พัฒนาการออกแบบกิจกรรมแก้ปัญหาทางคณิตศาสตร์', 'โค้ช', 'ตรวจแผนและสังเกตชั้นเรียน', 'ดำเนินการ', 12, 9], ['คะแนนด้านการคิดวิเคราะห์ต่ำ', 'พัฒนาการจัดการเรียนรู้แบบ Active Learning', 'อบรม', 'สังเกตพฤติกรรมผู้เรียน', 'วางแผน', 0, 0], ['ผลสัมฤทธิ์ไม่พัฒนาต่อเนื่อง', 'จัดทำ PLC วิเคราะห์ปัญหารายโรงเรียน', 'PLC', 'ติดตามคะแนนรายภาคเรียน', 'ติดตามผล', 8, 6]].forEach((r, i) => {
+    const id = 'sim' + i; out.improve[id] = { id, s: i === 0 ? '' : pick(i * 7 + 3), issue: r[0], plan: r[1], method: r[2], track: r[3], status: r[4], teachers: r[5], plans: r[6], outcome: i === 3 ? 'คะแนนเฉลี่ยวิชาคณิตศาสตร์เพิ่มขึ้นเล็กน้อยเมื่อเทียบกับปีก่อน' : '', baseline: '', current: '', date: '2568-06-0' + (i + 1) };
+  });
+  out.settings.app = { total: 39 };
+  return out;
+}
+let REAL_DATA = null;
+function setSim(on) {
+  if (on === SIM) return;
+  if (on) { REAL_DATA = Store.data; Store.data = makeSim(); SIM = true; try { sessionStorage.setItem('app_sim', '1'); } catch (e) {} }
+  else { Store.data = REAL_DATA || ((window.APP_BOOT && window.APP_BOOT.data) || {}); REAL_DATA = null; SIM = false; try { sessionStorage.removeItem('app_sim'); } catch (e) {} }
+  IDX = null; S.year = null; renderChrome(); render();
+  toast(on ? 'เปิดโหมดจำลองข้อมูลแล้ว (ไม่กระทบข้อมูลจริง)' : 'กลับสู่ข้อมูลจริงแล้ว', 'ok');
+}
+
+/* ===================== PAGES A: chrome / router / dashboards ===================== */
+const S = { page: 'home', tab: {}, year: null, level: 'M3', sch: '', cn: 'TH', grp: GROUPS[0].k, sort: 'mean' };
+const NAV = [
+  { h: 'Dashboard' }, { k: 'home', i: '🏠', t: 'ภาพรวมคุณภาพการศึกษา', m: 'ภาพรวม' }, { k: 'subj', i: '📚', t: 'วิเคราะห์รายกลุ่มสาระ', m: 'กลุ่มสาระ' }, { k: 'heat', i: '🟥', t: 'Heatmap รายมาตรฐาน', m: 'Heatmap' }, { k: 'sup', i: '🧭', t: 'วิเคราะห์เพื่อการนิเทศ', m: 'นิเทศ' },
+  { h: 'การวิเคราะห์' }, { k: 'acad', i: '🎓', t: 'ผลสัมฤทธิ์ทางการเรียน', m: 'ผลการเรียน' }, { k: 'onet', i: '📈', t: 'ผลการทดสอบ O-NET', m: 'O-NET' }, { k: 'diag', i: '🔎', t: 'วินิจฉัยจุดที่ต้องพัฒนา', m: 'วินิจฉัย' }, { k: 'imp', i: '✅', t: 'ติดตามผลการพัฒนา', m: 'ติดตาม' },
+  { h: 'จัดการระบบ' }, { k: 'data', i: '⬆️', t: 'นำเข้าข้อมูล', m: 'นำเข้า' }, { k: 'set', i: '⚙️', t: 'ตั้งค่า', m: 'ตั้งค่า' }];
+const FILT = { home: 'yl', subj: 'yl', heat: 'yl', sup: 'yl', acad: 'y', onet: 'yl', diag: 'yl' };
+const PAGES = {};
+const navTitle = k => (NAV.find(n => n.k === k) || {}).t || '';
+
+function toggleSb(f) { const sb = $('#sb'), on = f == null ? !sb.classList.contains('open') : f; sb.classList.toggle('open', on); $('#scrim').classList.toggle('on', on); }
+function go(p, tab) { S.page = p; if (tab) S.tab[p] = tab; toggleSb(false); render(); }
+function sel(id, opts, val, fn, cls) { return '<select id="' + id + '" class="' + (cls || '') + '" onchange="' + fn + '(this.value)">' + opts.map(o => '<option value="' + esc(o[0]) + '"' + (String(o[0]) === String(val) ? ' selected' : '') + '>' + esc(o[1]) + '</option>').join('') + '</select>'; }
+const yearOpts = () => idx().years.map(y => [y, 'ปีการศึกษา ' + y]);
+const levelOpts = () => { const L = idx().levels.length ? idx().levels : ['M3', 'M6']; return L.map(l => [l, 'ชั้น ' + (LEVEL_NAME[l] || l)]); };
+const schoolOpts = (all) => (all ? [['', 'ทั้งสังกัด']] : []).concat(idx().schools.map(s => [s.code, sName(s.code)]));
+function setY(v) { S.year = +v; render(); }
+function setL(v) { S.level = v; render(); }
+function setTab(p, t) { S.tab[p] = t; render(); }
+function tabsHtml(p, list) { const cur = S.tab[p] || list[0][0]; return '<div class="tabs">' + list.map(t => '<button class="tab' + (cur === t[0] ? ' on' : '') + '" onclick="setTab(\'' + p + '\',\'' + t[0] + '\')">' + t[1] + '</button>').join('') + '</div>'; }
+const curTab = (p, d) => S.tab[p] || d;
+
+function renderChrome() {
+  const st = getSettings();
+  $('#sb').innerHTML = '<div class="brand"><img src="' + esc(logoSrc()) + '" alt="logo"/><div><b>' + esc(st.short) + '</b><small>' + esc(st.org) + '</small></div></div>' +
+    NAV.map(n => n.h ? '<div class="nv-h">' + n.h + '</div>' : '<button class="nv' + (S.page === n.k ? ' on' : '') + '" onclick="go(\'' + n.k + '\')"><i>' + n.i + '</i><span>' + n.t + '</span></button>').join('') +
+    '<div style="flex:1"></div><div class="small muted" style="padding:8px">เวอร์ชัน ' + APP_VERSION + ' • ' + (MODE === 'gas' ? 'เชื่อมต่อ Google Sheets' : 'โหมดทดลอง (ไม่เชื่อมฐานข้อมูล)') + '</div>';
+  const f = FILT[S.page] || '';
+  $('#top').innerHTML = '<button class="btn sm" id="burger" onclick="toggleSb()" aria-label="เมนู">☰</button><h2>' + esc(navTitle(S.page)) + '</h2>' +
+    '<div class="sel noprint">' + (f.indexOf('y') >= 0 && idx().years.length ? sel('fy', yearOpts(), S.year || latestYear(), 'setY') : '') + (f.indexOf('l') >= 0 ? sel('fl', levelOpts(), S.level, 'setL') : '') + '</div>' +
+    '<div class="noprint" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' + exportMenu() + (AUTH ? '<span class="bdg b">' + (AUTH.role === 'admin' ? 'ผู้ดูแล' : 'โรงเรียน: ' + esc(sName(AUTH.sch))) + '</span><button class="btn sm" onclick="logout()">ออก</button>' : '<button class="btn sm pri" onclick="openLogin()">🔐 เข้าสู่ระบบ</button>') + '</div>';
+  $('#foot').innerHTML = '<div>' + esc(getSettings().title) + ' • ' + esc(st.org) + '</div><div style="margin-top:4px"><b>' + esc(CREDIT_DESIGN) + '</b> &nbsp;•&nbsp; <b>' + esc(CREDIT_DEV) + '</b></div>';
+  const sb = $('#simbar'); sb.classList.toggle('on', SIM);
+  sb.innerHTML = SIM ? '<span>🧪 โหมดจำลองข้อมูล — ข้อมูลทั้งหมดเป็นข้อมูลสมมติเพื่อสาธิต ไม่ใช่ข้อมูลจริง และจะไม่ถูกบันทึกลงฐานข้อมูล</span><button class="btn sm" onclick="setSim(false)">ออกจากโหมดจำลอง</button>' : '';
+  const mn = ['home', 'onet', 'acad', 'data'].map(k => NAV.find(n => n.k === k));
+  $('#mnav').innerHTML = mn.map(n => '<button class="' + (S.page === n.k ? 'on' : '') + '" onclick="go(\'' + n.k + '\')"><i>' + n.i + '</i>' + n.m + '</button>').join('') + '<button onclick="toggleSb(true)"><i>☰</i>เมนู</button>';
+  const ic = $('link[rel=icon]') || document.head.appendChild(Object.assign(document.createElement('link'), { rel: 'icon' })); ic.href = logoSrc();
+}
+function render() {
+  if (S.year == null || !idx().years.includes(+S.year)) S.year = latestYear();
+  if (idx().levels.length && !idx().levels.includes(S.level)) S.level = idx().levels.includes('M3') ? 'M3' : idx().levels[0];
+  renderChrome();
+  const v = $('#view'); let h;
+  try { h = (PAGES[S.page] || PAGES.home)(); } catch (e) { h = '<div class="note bad">เกิดข้อผิดพลาดในการแสดงผล: ' + esc(e.message) + '</div>'; console.error(e); }
+  v.innerHTML = h; pageIn(v); initMotion(v); initTilt(v); window.scrollTo(0, 0);
+  if (PAGES['after_' + S.page]) PAGES['after_' + S.page]();
+}
+const noData = () => '<div class="card">' + empty('ยังไม่มีข้อมูลในระบบ — เริ่มต้นโดยนำเข้าไฟล์ PDF จากระบบ O-NET ของ สทศ. หรือลองดูตัวอย่างด้วยโหมดจำลอง', '<button class="btn pri" onclick="go(\'data\')">⬆️ ไปหน้านำเข้าข้อมูล</button> <button class="btn" onclick="setSim(true)">🧪 ดูตัวอย่างด้วยข้อมูลจำลอง</button>') + '</div>';
+const kpi = (l, v, s, o) => { o = o || {}; return '<div class="card kpi"><div class="l">' + l + '</div><div class="v"' + (o.count != null ? ' data-count="' + o.count + '" data-d="' + (o.d == null ? 0 : o.d) + '"' : '') + '>' + (o.count != null ? '0' : v) + '</div><div class="s">' + (s || '') + '</div></div>'; };
+const secHead = (t, s, right) => '<div class="row" style="justify-content:space-between;align-items:flex-start"><div><h3>' + t + '</h3>' + (s ? '<div class="sub">' + s + '</div>' : '') + '</div>' + (right || '') + '</div>';
+
+/* ---------- Dashboard 1: ภาพรวมคุณภาพการศึกษา ---------- */
+PAGES.home = function () {
+  const I = idx(); if (!I.years.length) return noData();
+  const y = S.year, l = S.level, st = getSettings();
+  const subm = submittedSchools(y).size;
+  let stu = sum(Object.values(col('schools')).map(s => +s.students || 0));
+  if (!stu) { const m = {}; acadRows(y).forEach(r => { m[r.s] = Math.max(m[r.s] || 0, r.st.n || 0); }); stu = sum(Object.values(m)); }
+  const aa = acadAgg(acadRows(y));
+  const subs = SUBJ_ORDER.map(cn => aggSubject(y, l, cn)).filter(Boolean);
+  const oAvg = avg(subs.map(a => a.mean).filter(v => v != null)), nAvg = avg(subs.map(a => a.nat).filter(v => v != null));
+  const gs = GROUPS.map(g => ({ g: g.k, a: groupAgg(y, g.k) })).filter(x => x.a);
+  const hi = gs.slice().sort((a, b) => b.a.mean - a.a.mean)[0], lo = gs.slice().sort((a, b) => a.a.mean - b.a.mean)[0];
+  const urgent = []; SUBJ_ORDER.forEach(cn => stdAgg(y, l, cn).forEach(s => urgent.push(Object.assign({ cn }, s)))); urgent.sort((a, b) => a.diff - b.diff);
+  const yrs = I.years, tAcad = yrs.map(yy => { const a = acadAgg(acadRows(yy)); return a ? a.mean : null; });
+  const tO = yrs.map(yy => { const a = SUBJ_ORDER.map(cn => aggSubject(yy, l, cn)).filter(Boolean); return a.length ? avg(a.map(x => x.mean)) : null; });
+  const tN = yrs.map(yy => { const a = SUBJ_ORDER.map(cn => aggSubject(yy, l, cn)).filter(Boolean); return a.length ? avg(a.map(x => x.nat)) : null; });
+  return '<div class="stack"><div class="hero"><h2>Data to Insight → Insight to Action → Action to Improvement</h2><p>' + esc(st.title) + ' • ปีการศึกษา ' + y + ' • ชั้น ' + (LEVEL_NAME[l] || l) + '</p></div>' +
+    '<div class="grid g4">' +
+    '<div class="card kpi"><div class="l">โรงเรียนที่ส่งข้อมูล</div><div class="v"><span data-count="' + subm + '" data-d="0">0</span> / ' + st.total + '</div><div class="s"><div class="prog" style="margin-top:6px"><i style="width:' + Math.min(100, subm / st.total * 100) + '%"></i></div></div></div>' +
+    kpi('นักเรียนในระบบ (คน)', '', 'จากข้อมูลพื้นฐานโรงเรียน/ผลการเรียน', { count: stu, d: 0 }) +
+    (aa ? kpi('ผลสัมฤทธิ์เฉลี่ย (เต็ม 4)', '', 'ผ่านเกณฑ์ ' + fmt(aa.pass, 1) + '% • ระดับ 3 ขึ้นไป ' + fmt(aa.p3, 1) + '%', { count: aa.mean, d: 2 }) : kpi('ผลสัมฤทธิ์เฉลี่ย (เต็ม 4)', '–', 'ยังไม่มีข้อมูลผลการเรียน')) +
+    (oAvg != null ? kpi('คะแนนเฉลี่ย O-NET (อบจ.)', '', 'ประเทศ ' + fmt(nAvg) + ' • ผลต่าง ' + sgn(oAvg - nAvg), { count: oAvg, d: 2 }) : kpi('คะแนนเฉลี่ย O-NET (อบจ.)', '–', 'ยังไม่มีข้อมูล O-NET')) + '</div>' +
+    '<div class="grid g2"><div class="card">' + secHead('ผลสัมฤทธิ์ทางการเรียนรายกลุ่มสาระ', hi && lo ? 'สูงสุด: <b>' + esc(hi.g) + '</b> (' + fmt(hi.a.mean) + ') • ต่ำสุด: <b>' + esc(lo.g) + '</b> (' + fmt(lo.a.mean) + ')' : '') +
+    (gs.length ? hbars(gs.map(x => ({ label: x.g, val: x.a.mean, txt: fmt(x.a.mean), color: accLabel(x.a.mean)[1] === 'r' ? '#dc2626' : accLabel(x.a.mean)[1] === 'y' ? '#f59e0b' : '#16a34a' })), { max: 4 }) : empty('ยังไม่มีข้อมูลผลการเรียน')) + '</div>' +
+    '<div class="card">' + secHead('O-NET เฉลี่ยรายวิชา เทียบประเทศ', 'อบจ. = ค่าเฉลี่ยถ่วงน้ำหนักจำนวนผู้สอบของโรงเรียนที่นำเข้า') +
+    (subs.length ? chartBars(subs.map(a => SUBJ_NAME[a.cn]), [{ name: 'อบจ.ศรีสะเกษ', vals: subs.map(a => a.mean) }, { name: 'ประเทศ', vals: subs.map(a => a.nat), color: '#94a3b8' }], { max: 100, d: 1 }) : empty('ยังไม่มีข้อมูล O-NET ชั้นนี้')) + '</div></div>' +
+    '<div class="grid g2"><div class="card">' + secHead('มาตรฐานการเรียนรู้ที่ต้องเร่งพัฒนา', 'เรียงตามค่าเฉลี่ยที่ต่ำกว่าประเทศมากที่สุด (O-NET)') +
+    tbl(['วิชา', 'มาตรฐาน', { h: 'เฉลี่ย', c: 'n' }, { h: 'ประเทศ', c: 'n' }, { h: 'ผลต่าง', c: 'n' }, { h: 'รร.ต่ำกว่า', c: 'n' }], urgent.filter(u => u.diff < 0).slice(0, 6).map(u => [SUBJ_NAME[u.cn], 'มาตรฐาน ' + u.k, fmt(u.m), fmt(u.nat), dfx(u.diff), u.below + '/' + u.n])) + '</div>' +
+    '<div class="card">' + secHead('แนวโน้มย้อนหลัง', 'ผลสัมฤทธิ์ทางการเรียน และ O-NET ชั้น ' + (LEVEL_NAME[l] || l)) +
+    chartLine(yrs.map(String), [{ name: 'ผลสัมฤทธิ์ (0–4)', vals: tAcad }], { min: 0, max: 4, d: 2, h: 160 }) +
+    chartLine(yrs.map(String), [{ name: 'O-NET อบจ.', vals: tO }, { name: 'O-NET ประเทศ', vals: tN, color: '#94a3b8', dash: true }], { d: 1, h: 180 }) + '</div></div></div>';
+};
+
+/* ---------- Dashboard 2: รายกลุ่มสาระ + จัดอันดับ ---------- */
+function setGrp(v) { S.grp = v; render(); }
+function setSort(v) { S.sort = v; render(); }
+PAGES.subj = function () {
+  const I = idx(); if (!I.years.length) return noData();
+  const y = S.year, l = S.level, g = GROUPS.find(x => x.k === S.grp) || GROUPS[0];
+  const ag = I.schools.map(s => { const a = acadAgg(acadRows(y, { s: s.code, g: g.k })); const r = g.cn ? schoolRec(y, l, g.cn, s.code) : null; const d = (r && r.lv.sch && r.lv.nat) ? r.lv.sch[1] - r.lv.nat[1] : null; return { s: s.code, a, o: r && r.lv.sch ? r.lv.sch[1] : null, d }; }).filter(x => x.a || x.o != null);
+  const key = { mean: x => x.a ? x.a.mean : -1, pass: x => x.a ? x.a.pass : -1, p3: x => x.a ? x.a.p3 : -1, onet: x => x.d == null ? -999 : x.d }[S.sort];
+  ag.sort((a, b) => key(b) - key(a));
+  const all = groupAgg(y, g.k);
+  return '<div class="stack"><div class="card"><div class="row"><div class="grow"><label class="f">กลุ่มสาระการเรียนรู้</label>' + sel('gsel', GROUPS.map(x => [x.k, x.k]), g.k, 'setGrp') + '</div><div class="grow"><label class="f">จัดอันดับตาม</label>' + sel('ssel', [['mean', 'ค่าเฉลี่ยผลการเรียน'], ['pass', 'ร้อยละผ่านเกณฑ์'], ['p3', 'ร้อยละระดับ 3 ขึ้นไป']].concat(g.cn ? [['onet', 'ผลต่าง O-NET จากประเทศ']] : []), S.sort, 'setSort') + '</div></div></div>' +
+    (all ? '<div class="grid g4">' + kpi('ค่าเฉลี่ยทั้งสังกัด', '', 'จาก ' + all.schools + ' โรงเรียน', { count: all.mean, d: 2 }) + kpi('ผ่านเกณฑ์', '', 'ไม่ผ่าน ' + fmtI(all.fail) + ' คน', { count: all.pass, d: 1 }) + kpi('ระดับ 3 ขึ้นไป (%)', '', 'จากนักเรียน ' + fmtI(all.n) + ' คน', { count: all.p3, d: 1 }) + kpi('การแปลผล', lbBdg(accLabel(all.mean)), 'เกณฑ์ปรับได้ในตั้งค่า') + '</div>' : '') +
+    '<div class="card">' + secHead('จัดอันดับโรงเรียน — ' + esc(g.k), 'ปีการศึกษา ' + y + (g.cn ? ' • O-NET ชั้น ' + (LEVEL_NAME[l] || l) : '')) +
+    tbl([{ h: '#', c: 'c' }, 'โรงเรียน', { h: 'ค่าเฉลี่ย', c: 'n' }, { h: 'ผ่านเกณฑ์ %', c: 'n' }, { h: 'ระดับ 3+ %', c: 'n' }, 'แปลผล'].concat(g.cn ? [{ h: 'O-NET', c: 'n' }, 'เทียบประเทศ'] : []),
+      ag.map((x, i) => [i + 1, esc(sName(x.s)), x.a ? fmt(x.a.mean) : '–', x.a ? fmt(x.a.pass, 1) : '–', x.a ? fmt(x.a.p3, 1) : '–', x.a ? lbBdg(accLabel(x.a.mean)) : '–'].concat(g.cn ? [x.o != null ? fmt(x.o) : '–', x.d != null ? colBdg(x.d) + ' ' + dfx(x.d) : '–'] : []))) + '</div></div>';
+};
+
+/* ---------- Dashboard 3: Heatmap รายมาตรฐาน ---------- */
+function setCn(v) { S.cn = v; render(); }
+function heatBg(d) { if (d == null) return '#fafafa'; const a = Math.min(.82, .12 + Math.abs(d) / 14); return d >= 0 ? 'rgba(22,163,74,' + a + ')' : 'rgba(220,38,38,' + a + ')'; }
+const heatLegend = () => '<div class="legend"><span><i style="background:rgba(22,163,74,.7)"></i>สูงกว่าค่าเฉลี่ยประเทศ</span><span><i style="background:#fafafa;border:1px solid #ddd"></i>ใกล้เคียง/ไม่มีข้อมูล</span><span><i style="background:rgba(220,38,38,.7)"></i>ต่ำกว่าค่าเฉลี่ยประเทศ</span></div>';
+PAGES.heat = function () {
+  const I = idx(); if (!I.years.length) return noData();
+  const y = S.year, l = S.level;
+  const cnList = SUBJ_ORDER.filter(cn => stdAgg(y, l, cn).length);
+  if (cnList.length && !cnList.includes(S.cn)) S.cn = cnList[0];
+  const stds = cnList.length ? stdAgg(y, l, S.cn) : [], keys = stds.map(s => s.k);
+  const rowsS = I.schools.map(s => ({ s: s.code, vals: schoolStd(y, l, S.cn, s.code) })).filter(r => r.vals.length);
+  let h = '<div class="stack">';
+  h += '<div class="card">' + secHead('ผลต่างรายวิชา: โรงเรียน × วิชา', 'ค่าผลต่างจากค่าเฉลี่ยระดับประเทศ (คะแนน) • ชั้น ' + (LEVEL_NAME[l] || l) + ' ปี ' + y) + heatSubjects(y, l) + heatLegend() + '</div>';
+  h += '<div class="card">' + secHead('Heatmap รายมาตรฐานการเรียนรู้ (โรงเรียน × มาตรฐาน)', 'ค่าผลต่างระหว่างค่าเฉลี่ยมาตรฐานของโรงเรียนกับค่าเฉลี่ยประเทศ') +
+    (cnList.length ? '<div class="row" style="margin-bottom:12px"><div>' + sel('csel', cnList.map(c => [c, SUBJ_NAME[c]]), S.cn, 'setCn') + '</div></div>' : '') +
+    (rowsS.length ? '<div class="tw"><table class="t heat"><thead><tr><th class="sch">โรงเรียน</th>' + keys.map(k => '<th>' + esc(k) + '</th>').join('') + '</tr></thead><tbody>' +
+      rowsS.map(r => '<tr><td class="sch">' + esc(sName(r.s)) + '</td>' + keys.map(k => { const v = r.vals.find(x => x.k === k); return '<td class="hc" style="background:' + heatBg(v ? v.diff : null) + '" title="' + (v ? 'คะแนน ' + fmt(v.m) + ' / ประเทศ ' + fmt(v.nat) : '') + '">' + (v && v.diff != null ? sgn(v.diff, 1) : '') + '</td>'; }).join('') + '</tr>').join('') +
+      '<tr><td class="sch"><b>เฉลี่ยทั้งสังกัด</b></td>' + stds.map(s => '<td class="hc" style="background:' + heatBg(s.diff) + '"><b>' + sgn(s.diff, 1) + '</b></td>').join('') + '</tr></tbody></table></div>' + heatLegend()
+      : empty('ไม่มีข้อมูลรายมาตรฐานของชั้น/ปีนี้ (ต้องนำเข้า PDF ฉบับที่ 2 — ค่าสถิติแยกตามมาตรฐานการเรียนรู้) ชั้น ม.6 ใน สทศ. ไม่มีรายงานรายมาตรฐาน')) + '</div></div>';
+  return h;
+};
+function heatSubjects(y, l) {
+  const cns = SUBJ_ORDER.filter(cn => aggSubject(y, l, cn)); if (!cns.length) return empty('ยังไม่มีข้อมูล O-NET ชั้นนี้');
+  return '<div class="tw"><table class="t heat"><thead><tr><th class="sch">โรงเรียน</th>' + cns.map(c => '<th>' + SUBJ_NAME[c] + '</th>').join('') + '</tr></thead><tbody>' +
+    idx().schools.map(s => { const p = schoolProfile(y, l, s.code); if (!Object.keys(p.subj).length) return ''; return '<tr><td class="sch">' + esc(sName(s.code)) + '</td>' + cns.map(c => { const v = p.subj[c]; return '<td class="hc" style="background:' + heatBg(v ? v.diff : null) + '">' + (v ? sgn(v.diff, 1) : '') + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>';
+}
+
+/* ---------- Dashboard 4: วิเคราะห์เพื่อการนิเทศและพัฒนา ---------- */
+function supInsights(y, l) {
+  const I = idx(), st = getSettings(), b = st.band, prof = {};
+  I.schools.forEach(s => prof[s.code] = schoolProfile(y, l, s.code));
+  const urgent = I.schools.map(s => {
+    const p = prof[s.code]; let pts = 0; const why = [];
+    Object.keys(p.subj).forEach(cn => { const d = p.subj[cn].diff; if (d <= -2 * b) { pts += 2; why.push(SUBJ_NAME[cn] + ' ' + sgn(d, 1)); } else if (d <= -b) { pts += 1; why.push(SUBJ_NAME[cn] + ' ' + sgn(d, 1)); } });
+    GROUPS.forEach(g => { const a = acadAgg(acadRows(y, { s: s.code, g: g.k })); if (a && a.mean < st.accMid) { pts += 1; why.push(g.k + ' เกรด ' + fmt(a.mean)); } });
+    return { s: s.code, pts, why };
+  }).filter(x => x.pts > 0).sort((a, b) => b.pts - a.pts);
+  const model = I.schools.map(s => ({ s: s.code, p: prof[s.code] })).filter(x => x.p.above >= 2 && x.p.below === 0).sort((a, b) => b.p.totalDiff - a.p.totalDiff);
+  const training = SUBJ_ORDER.map(cn => { const a = aggSubject(y, l, cn); return a ? { cn, below: a.rows.filter(r => r.diff != null && r.diff <= -b).length, n: a.rows.length, diff: a.diff } : null; }).filter(Boolean).sort((a, b) => (b.below / b.n) - (a.below / a.n));
+  const plc = []; SUBJ_ORDER.forEach(cn => stdAgg(y, l, cn).forEach(s => { if (s.n && s.below / s.n >= .5) plc.push(Object.assign({ cn }, s)); })); plc.sort((a, b) => a.diff - b.diff);
+  const follow = []; I.schools.forEach(s => { const why = []; SUBJ_ORDER.forEach(cn => { const tr = trendOf(s.code, l, cn); const f = trendFlags(tr); if (f.some(x => x[0] === 'คะแนนลดลง')) why.push(SUBJ_NAME[cn] + ' คะแนนลดลง'); if (f.some(x => x[0].indexOf('ต่ำกว่าระดับประเทศต่อเนื่อง') === 0)) why.push(SUBJ_NAME[cn] + ' ต่ำกว่าประเทศต่อเนื่อง'); }); if (why.length) follow.push({ s: s.code, why }); });
+  follow.sort((a, b) => b.why.length - a.why.length);
+  return { urgent, model, training, plc, follow };
+}
+PAGES.sup = function () {
+  const I = idx(); if (!I.years.length) return noData();
+  const y = S.year, l = S.level, R = supInsights(y, l);
+  const li = (a, f) => a.length ? '<div class="stack" style="--g:8px">' + a.slice(0, 8).map(f).join('') + '</div>' : empty('ไม่พบรายการ');
+  return '<div class="stack"><div class="note info">ข้อเสนอแนะนี้คำนวณจากข้อมูลที่นำเข้าและเกณฑ์สีที่ตั้งไว้ (ผลต่างตั้งแต่ ±' + getSettings().band + ' คะแนน) — ใช้ประกอบการตัดสินใจ ไม่ใช่การตัดสินคุณภาพโดยอัตโนมัติ</div>' +
+    '<div class="grid g2"><div class="card"><h3>🚨 โรงเรียนที่ควรได้รับการนิเทศเร่งด่วน</h3><div class="sub">คะแนนรวมจากวิชาที่ต่ำกว่าประเทศ + กลุ่มสาระที่เกรดเฉลี่ยต่ำ</div>' +
+    tbl(['โรงเรียน', { h: 'คะแนนเสี่ยง', c: 'n' }, 'สาเหตุหลัก'], R.urgent.slice(0, 8).map(x => [esc(sName(x.s)), '<b class="neg">' + x.pts + '</b>', '<span class="small">' + esc(x.why.slice(0, 3).join(' • ')) + '</span>'])) + '</div>' +
+    '<div class="card"><h3>🎯 กลุ่มสาระที่ควรจัดอบรมพัฒนาครู</h3><div class="sub">จำนวนโรงเรียนที่ต่ำกว่าค่าเฉลี่ยประเทศในวิชานั้น</div>' +
+    (R.training.length ? hbars(R.training.map(t => ({ label: SUBJ_NAME[t.cn], val: t.below / t.n * 100, txt: t.below + '/' + t.n + ' รร.', color: t.below / t.n >= .5 ? '#dc2626' : '#f59e0b' })), { max: 100 }) : empty('ยังไม่มีข้อมูล')) + '</div></div>' +
+    '<div class="grid g2"><div class="card"><h3>👥 มาตรฐานที่ควรจัดทำ PLC</h3><div class="sub">โรงเรียนอย่างน้อยครึ่งหนึ่งมีค่าเฉลี่ยต่ำกว่าประเทศ</div>' +
+    tbl(['วิชา', 'มาตรฐาน', { h: 'ผลต่าง', c: 'n' }, { h: 'รร.ต่ำกว่า', c: 'n' }], R.plc.slice(0, 8).map(p => [SUBJ_NAME[p.cn], 'มาตรฐาน ' + p.k, dfx(p.diff), p.below + '/' + p.n])) + '</div>' +
+    '<div class="card"><h3>🏅 โรงเรียนที่มีแนวปฏิบัติที่ดี (ต้นแบบ)</h3><div class="sub">สูงกว่าประเทศอย่างน้อย 2 วิชา และไม่มีวิชาที่ต่ำกว่าประเทศ</div>' +
+    tbl(['โรงเรียน', { h: 'สูงกว่า (วิชา)', c: 'n' }, { h: 'ผลต่างรวม', c: 'n' }], R.model.slice(0, 8).map(x => [esc(sName(x.s)), x.p.above, dfx(x.p.totalDiff)])) + '</div></div>' +
+    '<div class="card"><h3>🔭 โรงเรียนที่ควรติดตามผลเป็นพิเศษ</h3><div class="sub">คะแนนลดลงจากปีก่อน หรือต่ำกว่าระดับประเทศต่อเนื่องหลายปี</div>' +
+    tbl(['โรงเรียน', 'ประเด็นที่พบ'], R.follow.slice(0, 10).map(x => [esc(sName(x.s)), '<span class="small">' + esc(x.why.join(' • ')) + '</span>'])) + '</div></div>';
+};
+
+/* ===================== PAGES B: ผลสัมฤทธิ์ / O-NET / วินิจฉัย / ติดตามพัฒนา ===================== */
+function setSch(v) { S.sch = v; render(); }
+function ensureSch() { const L = idx().schools; if (!S.sch || (!col('schools')[S.sch] && S.sch !== '__all')) S.sch = L.length ? L[0].code : ''; }
+const deltaTxt = (a, b) => (a == null || b == null) ? '–' : dfx(a - b);
+
+/* ---------- Module 2: ผลสัมฤทธิ์ทางการเรียน 4 ระดับ ---------- */
+PAGES.acad = function () {
+  const I = idx(); if (!I.years.length) return noData();
+  const t = curTab('acad', 'l1'), y = S.year;
+  let h = tabsHtml('acad', [['l1', 'ระดับ 1 ภาพรวมทั้งสังกัด'], ['l2', 'ระดับ 2 รายโรงเรียน'], ['l3', 'ระดับ 3 รายกลุ่มสาระ'], ['l4', 'ระดับ 4 รายมาตรฐาน']]);
+  if (t === 'l1') {
+    const aa = acadAgg(acadRows(y)); if (!aa) return h + empty('ยังไม่มีข้อมูลผลการเรียนปี ' + y, '<button class="btn pri" onclick="go(\'data\')">นำเข้าข้อมูลผลการเรียน</button>');
+    const gs = GROUPS.map(g => ({ g: g.k, a: groupAgg(y, g.k) })).filter(x => x.a), hi = gs.slice().sort((a, b) => b.a.mean - a.a.mean)[0], lo = gs.slice().sort((a, b) => a.a.mean - b.a.mean)[0];
+    h += '<div class="stack"><div class="grid g4">' + kpi('คะแนนเฉลี่ยทั้งสังกัด (เต็ม 4)', '', 'จาก ' + aa.schools + ' โรงเรียน', { count: aa.mean, d: 2 }) + kpi('ร้อยละนักเรียนที่ผ่านเกณฑ์', '', '', { count: aa.pass, d: 1 }) + kpi('ร้อยละระดับ 3 ขึ้นไป', '', '', { count: aa.p3, d: 1 }) +
+      kpi('สูงสุด / ต่ำสุด', '<span style="font-size:15px;-webkit-text-fill-color:#1f2328">' + esc(hi.g) + '<br/>' + esc(lo.g) + '</span>', fmt(hi.a.mean) + ' / ' + fmt(lo.a.mean)) + '</div>';
+    const yrs = I.years.map(yy => { const a = acadAgg(acadRows(yy)); return { y: yy, a }; });
+    h += '<div class="card">' + secHead('แนวโน้มผลสัมฤทธิ์ย้อนหลัง') + chartLine(yrs.map(x => String(x.y)), [{ name: 'เฉลี่ย (0–4)', vals: yrs.map(x => x.a ? x.a.mean : null) }], { min: 0, max: 4, d: 2, h: 190 }) +
+      tbl(['ปีการศึกษา', { h: 'เฉลี่ย', c: 'n' }, { h: 'ผ่านเกณฑ์ %', c: 'n' }, { h: 'ระดับ 3+ %', c: 'n' }, { h: 'จำนวนนักเรียน', c: 'n' }], yrs.map(x => [x.y, x.a ? fmt(x.a.mean) : '–', x.a ? fmt(x.a.pass, 1) : '–', x.a ? fmt(x.a.p3, 1) : '–', x.a ? fmtI(x.a.n) : '–'])) + '</div></div>';
+    return h;
+  }
+  if (t === 'l2') {
+    ensureSch(); const prev = I.years.filter(v => v < y).pop();
+    const dept = {}; GROUPS.forEach(g => dept[g.k] = groupAgg(y, g.k));
+    h += '<div class="stack"><div class="card"><label class="f">โรงเรียน</label>' + sel('ssc', schoolOpts(), S.sch, 'setSch') + '</div><div class="card">' + secHead('ผลสัมฤทธิ์รายกลุ่มสาระ — ' + esc(sName(S.sch)), 'เทียบค่าเฉลี่ยทั้งสังกัด' + (prev ? ' และปี ' + prev : '')) +
+      tbl(['กลุ่มสาระ', { h: 'เฉลี่ย', c: 'n' }, { h: 'ผ่าน (คน)', c: 'n' }, { h: 'ไม่ผ่าน (คน)', c: 'n' }, { h: 'ระดับ 3+ %', c: 'n' }, { h: 'เทียบทั้งสังกัด', c: 'n' }, { h: 'เทียบปีก่อน', c: 'n' }, 'แปลผล'],
+        GROUPS.map(g => { const a = acadAgg(acadRows(y, { s: S.sch, g: g.k })); if (!a) return [esc(g.k), '–', '–', '–', '–', '–', '–', '–']; const pv = prev ? acadAgg(acadRows(prev, { s: S.sch, g: g.k })) : null; return [esc(g.k), fmt(a.mean), fmtI(a.n - a.fail), fmtI(a.fail), fmt(a.p3, 1), deltaTxt(a.mean, dept[g.k] && dept[g.k].mean), pv ? deltaTxt(a.mean, pv.mean) : '–', lbBdg(accLabel(a.mean))]; })) + '</div></div>';
+    return h;
+  }
+  if (t === 'l3') {
+    h += '<div class="card">' + secHead('วิเคราะห์รายกลุ่มสาระการเรียนรู้ (ทั้งสังกัด)', 'เกณฑ์แปลผล: ค่าเฉลี่ย ≥ ' + getSettings().accHi + ' จุดแข็ง • ≥ ' + getSettings().accMid + ' ควรพัฒนา • ต่ำกว่านั้น เร่งพัฒนา (ปรับได้ในตั้งค่า)') +
+      tbl(['กลุ่มสาระ', { h: 'ค่าเฉลี่ย ' + (acadAgg(acadRows(y)) ? acadAgg(acadRows(y)).schools : 0) + ' แห่ง', c: 'n' }, { h: 'ผ่านเกณฑ์ ร้อยละ', c: 'n' }, 'ผลการวิเคราะห์'], GROUPS.map(g => { const a = groupAgg(y, g.k); return [esc(g.k), a ? fmt(a.mean) : '–', a ? fmt(a.pass, 2) : '–', a ? lbBdg(accLabel(a.mean)) : '–']; })) + '</div>';
+    return h;
+  }
+  const rows = []; SUBJ_ORDER.forEach(cn => stdAgg(y, S.level, cn).forEach(s => rows.push([SUBJ_NAME[cn], 'มาตรฐาน ' + s.k, fmt(s.m), fmt(s.nat), dfx(s.diff), lbBdg(stdLabel(s.m))])));
+  return h + '<div class="card">' + secHead('วิเคราะห์รายมาตรฐานการเรียนรู้', 'ใช้เฉพาะกลุ่มสาระที่สอบ O-NET (ข้อมูลจากฉบับที่ 2) • ชั้น ' + (LEVEL_NAME[S.level] || S.level) + ' • เกณฑ์ <' + getSettings().stdA + ' เร่งพัฒนา, <' + getSettings().stdB + ' ควรพัฒนา, <' + getSettings().stdC + ' ปานกลาง') +
+    tbl(['วิชา', 'มาตรฐาน', { h: 'คะแนนเฉลี่ย (%)', c: 'n' }, { h: 'ประเทศ', c: 'n' }, { h: 'ผลต่าง', c: 'n' }, 'ผลการวิเคราะห์'], rows) + '</div>';
+};
+
+/* ---------- Module 3: ผล O-NET ---------- */
+PAGES.onet = function () {
+  const I = idx(); if (!I.years.length) return noData();
+  const t = curTab('onet', 'ov'), y = S.year, l = S.level; ensureSch();
+  let h = tabsHtml('onet', [['ov', 'ภาพรวมทั้งสังกัด'], ['sc', 'รายโรงเรียน'], ['std', 'รายมาตรฐาน'], ['tr', 'แนวโน้มย้อนหลัง']]);
+  const noO = h + empty('ยังไม่มีข้อมูล O-NET ของ ' + (LEVEL_NAME[l] || l) + ' ปี ' + y, '<button class="btn pri" onclick="go(\'data\')">นำเข้า PDF จาก สทศ.</button>');
+  if (t === 'ov') {
+    const subs = SUBJ_ORDER.map(cn => aggSubject(y, l, cn)).filter(Boolean); if (!subs.length) return noO;
+    if (!subs.find(a => a.cn === S.cn)) S.cn = subs[0].cn; const cur = subs.find(a => a.cn === S.cn);
+    h += '<div class="stack"><div class="card">' + secHead('คะแนนเฉลี่ย O-NET ของโรงเรียนในสังกัด เทียบประเทศ/จังหวัด', 'ปีการศึกษา ' + y + ' ชั้น ' + (LEVEL_NAME[l] || l) + ' • เฉลี่ยถ่วงน้ำหนักด้วยจำนวนผู้เข้าสอบ') +
+      tbl(['วิชา', { h: 'ผู้สอบ', c: 'n' }, { h: 'อบจ.', c: 'n' }, { h: 'จังหวัด', c: 'n' }, { h: 'ประเทศ', c: 'n' }, { h: 'ผลต่าง', c: 'n' }, { h: '% สูงกว่าประเทศ', c: 'n' }, { h: 'สูงกว่า', c: 'n' }, { h: 'ใกล้เคียง', c: 'n' }, { h: 'ต่ำกว่า', c: 'n' }],
+        subs.map(a => [SUBJ_NAME[a.cn], fmtI(a.n), '<b>' + fmt(a.mean) + '</b>', fmt(a.prov), fmt(a.nat), dfx(a.diff), a.nat ? dfx(a.diff / a.nat * 100) : '–', '<span class="pos">' + a.cnt.g + '</span>', a.cnt.y, '<span class="neg">' + a.cnt.r + '</span>'])) +
+      chartBars(subs.map(a => SUBJ_NAME[a.cn]), [{ name: 'อบจ.ศรีสะเกษ', vals: subs.map(a => a.mean) }, { name: 'จังหวัด', vals: subs.map(a => a.prov), color: '#f59e0b' }, { name: 'ประเทศ', vals: subs.map(a => a.nat), color: '#94a3b8' }], { max: 100, d: 1 }) +
+      '<div class="small muted" style="margin-top:8px">คำนวณจากข้อมูลโรงเรียนที่นำเข้าแล้ว ' + subs[0].schools + ' แห่ง • ค่าจังหวัด/ประเทศอ้างอิงจากรายงาน สทศ. ของโรงเรียน</div></div>' +
+      '<div class="card">' + secHead('จัดอันดับโรงเรียนรายวิชา') + '<div class="row" style="margin-bottom:10px">' + sel('cs1', subs.map(a => [a.cn, SUBJ_NAME[a.cn]]), S.cn, 'setCn') + '</div>' +
+      tbl([{ h: '#', c: 'c' }, 'โรงเรียน', { h: 'ผู้สอบ', c: 'n' }, { h: 'คะแนน', c: 'n' }, { h: 'ประเทศ', c: 'n' }, { h: 'ผลต่าง', c: 'n' }, 'แปลผลสี'], cur.rows.slice().sort((a, b) => b.diff - a.diff).map((r, i) => [i + 1, esc(r.name), fmtI(r.n), fmt(r.m), fmt(r.nat), dfx(r.diff), colBdg(r.diff)])) + '</div></div>';
+    return h;
+  }
+  if (t === 'sc') {
+    const prof = schoolProfile(y, l, S.sch), cns = Object.keys(prof.subj); if (!cns.length) return h + '<div class="card"><label class="f">โรงเรียน</label>' + sel('ssc', schoolOpts(), S.sch, 'setSch') + '</div>' + noO.replace(h, '');
+    if (!cns.includes(S.cn)) S.cn = cns[0]; const rec = schoolRec(y, l, S.cn, S.sch);
+    const dist = rec && rec.dist ? rec.dist : null;
+    h += '<div class="stack"><div class="card"><label class="f">โรงเรียน</label>' + sel('ssc', schoolOpts(), S.sch, 'setSch') + '</div><div class="card">' + secHead('โรงเรียน' + esc(sName(S.sch).replace(/^โรงเรียน/, '')), 'เทียบกับค่าเฉลี่ยประเทศ/จังหวัด • เกณฑ์สี ±' + getSettings().band + ' คะแนน') +
+      tbl(['วิชา', { h: 'คะแนนโรงเรียน', c: 'n' }, { h: 'ระดับจังหวัด', c: 'n' }, { h: 'ระดับประเทศ', c: 'n' }, { h: 'ผลต่าง', c: 'n' }, 'แปลผลสี'], SUBJ_ORDER.filter(cn => prof.subj[cn]).map(cn => { const r = schoolRec(y, l, cn, S.sch), v = prof.subj[cn]; return [SUBJ_NAME[cn], '<b>' + fmt(v.m) + '</b>', fmt(r.lv.prov ? r.lv.prov[1] : null), fmt(v.nat), dfx(v.diff), colBdg(v.diff)]; })) +
+      chartBars(cns.map(c => SUBJ_NAME[c]), [{ name: 'โรงเรียน', vals: cns.map(c => prof.subj[c].m) }, { name: 'ประเทศ', vals: cns.map(c => prof.subj[c].nat), color: '#94a3b8' }], { max: 100, d: 1 }) + '</div>' +
+      (dist ? '<div class="card">' + secHead('การกระจายคะแนน — ' + SUBJ_NAME[S.cn], 'ร้อยละของผู้เข้าสอบตามช่วงคะแนน (จำนวนผู้สอบ ' + dist[11] + ' คน)') + '<div class="row" style="margin-bottom:8px">' + sel('cs2', cns.map(c => [c, SUBJ_NAME[c]]), S.cn, 'setCn') + '</div>' +
+        chartBars(['0-10', '10-20', '20-30', '30-40', '40-50', '50-60', '60-70', '70-80', '80-90', '90-100'], [{ name: 'ร้อยละ', vals: dist.slice(0, 10).map(c => dist[11] ? c / dist[11] * 100 : 0) }], { d: 0, h: 200 }) + '</div>' : '') + '</div>';
+    return h;
+  }
+  if (t === 'std') {
+    const cns = SUBJ_ORDER.filter(cn => stdAgg(y, l, cn).length); const hd = '<div class="card"><div class="row"><div class="grow"><label class="f">โรงเรียน</label>' + sel('ssc', schoolOpts(), S.sch, 'setSch') + '</div><div class="grow"><label class="f">วิชา</label>' + sel('cs3', cns.map(c => [c, SUBJ_NAME[c]]), S.cn, 'setCn') + '</div></div></div>';
+    if (!cns.length) return h + empty('ไม่มีข้อมูลรายมาตรฐาน (ต้องนำเข้า PDF ฉบับที่ 2 — ชั้น ม.3 เท่านั้นที่ สทศ. มีรายมาตรฐาน)');
+    if (!cns.includes(S.cn)) S.cn = cns[0];
+    const rows = schoolStd(y, l, S.cn, S.sch); const low = rows.filter(r => r.diff != null).sort((a, b) => a.diff - b.diff).slice(0, 2).filter(r => r.diff < 0);
+    return h + '<div class="stack">' + hd + '<div class="card">' + secHead('วิเคราะห์รายมาตรฐาน — ' + SUBJ_NAME[S.cn], esc(sName(S.sch))) +
+      tbl(['มาตรฐาน', { h: 'คะแนนเฉลี่ย (%)', c: 'n' }, { h: 'ค่าเฉลี่ยประเทศ', c: 'n' }, { h: 'ผลต่าง', c: 'n' }, 'แปลผล', 'เทียบประเทศ'], rows.map(r => ['มาตรฐาน ' + r.k, fmt(r.m), fmt(r.nat), dfx(r.diff), lbBdg(stdLabel(r.m)), colBdg(r.diff)])) +
+      (low.length ? '<div class="note" style="margin-top:12px">แม้คะแนนรวมวิชา' + SUBJ_NAME[S.cn] + 'อาจดูต่ำ แต่ประเด็นที่ควรเร่งพัฒนาอยู่ที่ <b>' + low.map(r => 'มาตรฐาน ' + r.k + ' (' + sgn(r.diff, 1) + ')').join(' และ ') + '</b> ไม่ใช่ทุกมาตรฐาน</div>' : '') + '</div></div>';
+  }
+  // แนวโน้ม
+  const cnsAll = SUBJ_ORDER.filter(cn => yearsOf(l).some(yy => aggSubject(yy, l, cn)));
+  if (!cnsAll.length) return noO; if (!cnsAll.includes(S.cn)) S.cn = cnsAll[0];
+  const scope = S.sch === '__all' ? null : S.sch, tr = trendOf(scope, l, S.cn), fl = trendFlags(tr);
+  return h + '<div class="stack"><div class="card"><div class="row"><div class="grow"><label class="f">ขอบเขต</label>' + sel('ssc', [['__all', 'ทั้งสังกัด']].concat(schoolOpts()), S.sch === '__all' ? '__all' : S.sch, 'setSch') + '</div><div class="grow"><label class="f">วิชา</label>' + sel('cs4', cnsAll.map(c => [c, SUBJ_NAME[c]]), S.cn, 'setCn') + '</div></div></div>' +
+    '<div class="card">' + secHead('แนวโน้มผล O-NET ย้อนหลัง — ' + SUBJ_NAME[S.cn], scope ? esc(sName(scope)) : 'ทั้งสังกัด (เฉลี่ยถ่วงน้ำหนัก)') +
+    chartLine(tr.map(x => String(x.y)), [{ name: scope ? 'โรงเรียน' : 'อบจ.', vals: tr.map(x => x.m) }, { name: 'ประเทศ', vals: tr.map(x => x.nat), color: '#94a3b8', dash: true }], { d: 1, h: 220 }) +
+    '<div style="margin:10px 0">' + (fl.length ? fl.map(f => bdg(f[0], f[1])).join(' ') : '<span class="muted small">ข้อมูลยังไม่พอสำหรับสรุปแนวโน้ม</span>') + '</div>' +
+    tbl(['ปีการศึกษา', { h: 'ผู้สอบ', c: 'n' }, { h: 'คะแนน', c: 'n' }, { h: 'ประเทศ', c: 'n' }, { h: 'ผลต่าง', c: 'n' }, { h: 'เปลี่ยนจากปีก่อน', c: 'n' }], tr.map((x, i) => [x.y, fmtI(x.n), fmt(x.m), fmt(x.nat), dfx(x.diff), i && tr[i - 1].m != null ? deltaTxt(x.m, tr[i - 1].m) : '–'])) +
+    (tr.filter(x => x.m != null).length < 3 ? '<div class="note" style="margin-top:12px">ระบบออกแบบให้เปรียบเทียบอย่างน้อย 3 ปี — ขณะนี้มีข้อมูล ' + tr.filter(x => x.m != null).length + ' ปี กรุณานำเข้าข้อมูลปีย้อนหลังเพิ่ม</div>' : '') + '</div></div>';
+};
+
+/* ---------- Module 4: วินิจฉัยจุดที่ต้องพัฒนา (3 มิติ) ---------- */
+PAGES.diag = function () {
+  const I = idx(); if (!I.years.length) return noData();
+  const t = curTab('diag', 'd1'), y = S.year, l = S.level, b = getSettings().band;
+  let h = tabsHtml('diag', [['d1', 'มิติ 1 จุดแข็ง/จุดอ่อนรายโรงเรียน'], ['d2', 'มิติ 2 จุดอ่อนร่วมทั้งสังกัด'], ['d3', 'มิติ 3 ความสัมพันธ์ผลการเรียน–O-NET']]);
+  if (t === 'd1') {
+    const rows = I.schools.map(s => { const p = schoolProfile(y, l, s.code); const ac = GROUPS.map(g => ({ g: g.k, a: acadAgg(acadRows(y, { s: s.code, g: g.k })) })).filter(x => x.a).sort((a, c) => c.a.mean - a.a.mean); return [esc(sName(s.code)), p.best ? SUBJ_NAME[p.best] + ' ' + dfx(p.subj[p.best].diff) : '–', p.worst ? SUBJ_NAME[p.worst] + ' ' + dfx(p.subj[p.worst].diff) : '–', ac.length ? esc(ac[0].g) + ' (' + fmt(ac[0].a.mean) + ')' : '–', ac.length ? esc(ac[ac.length - 1].g) + ' (' + fmt(ac[ac.length - 1].a.mean) + ')' : '–']; });
+    return h + '<div class="card">' + secHead('จุดแข็งและจุดที่ต้องพัฒนารายโรงเรียน', 'O-NET: เทียบผลต่างจากประเทศ • ผลการเรียน: เทียบเกรดเฉลี่ยรายกลุ่มสาระภายในโรงเรียน') + tbl(['โรงเรียน', 'จุดแข็ง (O-NET)', 'จุดที่ต้องพัฒนา (O-NET)', 'ผลการเรียนสูงสุด', 'ผลการเรียนต่ำสุด'], rows) + '</div>';
+  }
+  if (t === 'd2') {
+    const subs = SUBJ_ORDER.map(cn => aggSubject(y, l, cn)).filter(Boolean), sents = [];
+    subs.forEach(a => { const n = a.rows.filter(r => r.diff != null && r.diff < 0).length; sents.push('มี <b>' + n + '</b> โรงเรียน จาก ' + a.rows.length + ' แห่ง ที่คะแนน O-NET วิชา' + SUBJ_NAME[a.cn] + 'ต่ำกว่าค่าเฉลี่ยระดับประเทศ'); });
+    const stds = []; SUBJ_ORDER.forEach(cn => stdAgg(y, l, cn).forEach(s => stds.push(Object.assign({ cn }, s)))); stds.sort((a, c) => (c.below / c.n) - (a.below / a.n) || a.diff - c.diff);
+    const low = GROUPS.map(g => { const rs = I.schools.map(s => acadAgg(acadRows(y, { s: s.code, g: g.k }))).filter(Boolean); return { g: g.k, n: rs.filter(a => a.mean < getSettings().accMid).length, t: rs.length }; }).filter(x => x.t).sort((a, c) => c.n - a.n);
+    return h + '<div class="stack"><div class="card">' + secHead('จุดอ่อนร่วมของโรงเรียนทั้งสังกัด', 'ตัวอย่างข้อความสรุปที่ระบบสร้างจากข้อมูล') + (sents.length ? '<ul style="margin:0;padding-left:20px">' + sents.map(s => '<li>' + s + '</li>').join('') + '</ul>' : empty('ยังไม่มีข้อมูล O-NET')) + '</div>' +
+      '<div class="grid g2"><div class="card"><h3>มาตรฐานที่มีโรงเรียนต่ำกว่าประเทศมากที่สุด</h3><div class="sub">O-NET รายมาตรฐาน</div>' + tbl(['วิชา', 'มาตรฐาน', { h: 'รร.ต่ำกว่า', c: 'n' }, { h: 'ผลต่างเฉลี่ย', c: 'n' }], stds.slice(0, 10).map(s => [SUBJ_NAME[s.cn], 'มาตรฐาน ' + s.k, s.below + '/' + s.n, dfx(s.diff)])) + '</div>' +
+      '<div class="card"><h3>กลุ่มสาระที่เกรดเฉลี่ยต่ำกว่าเกณฑ์ ' + getSettings().accMid + '</h3><div class="sub">จำนวนโรงเรียนที่เข้าข่าย "เร่งพัฒนา"</div>' + tbl(['กลุ่มสาระ', { h: 'โรงเรียน', c: 'n' }], low.map(x => [esc(x.g), x.n + '/' + x.t])) + '</div></div></div>';
+  }
+  const cns = ['TH', 'MA', 'SC', 'EN'].filter(cn => aggSubject(y, l, cn)); if (!cns.length) return h + empty('ยังไม่มีข้อมูล O-NET');
+  if (!cns.includes(S.cn)) S.cn = cns[0]; const g = GROUPS.find(x => x.cn === S.cn);
+  const pts = []; I.schools.forEach(s => { const a = acadAgg(acadRows(y, { s: s.code, g: g.k })), r = schoolRec(y, l, S.cn, s.code); if (a && r && r.lv.sch && r.lv.nat) pts.push({ s: s.code, x: a.mean, y: r.lv.sch[1] - r.lv.nat[1] }); });
+  const r = pearson(pts.map(p => p.x), pts.map(p => p.y)), hi = getSettings().hiAcad, gap = pts.filter(p => p.x >= hi && p.y <= -b);
+  const summ = ['TH', 'MA', 'SC', 'EN'].map(cn => { const gg = GROUPS.find(x => x.cn === cn), q = []; I.schools.forEach(s => { const a = acadAgg(acadRows(y, { s: s.code, g: gg.k })), rr = schoolRec(y, l, cn, s.code); if (a && rr && rr.lv.sch && rr.lv.nat) q.push({ x: a.mean, y: rr.lv.sch[1] - rr.lv.nat[1] }); }); return { cn, n: q.length, r: pearson(q.map(p => p.x), q.map(p => p.y)), gap: q.filter(p => p.x >= hi && p.y <= -b).length }; }).filter(x => x.n);
+  return h + '<div class="stack"><div class="card"><div class="row"><div class="grow"><label class="f">กลุ่มสาระ / วิชา O-NET</label>' + sel('cs5', cns.map(c => [c, SUBJ_NAME[c]]), S.cn, 'setCn') + '</div></div></div>' +
+    '<div class="card">' + secHead('ผลการเรียน (แกน X) เทียบ ผลต่าง O-NET จากประเทศ (แกน Y)', 'แต่ละจุดคือหนึ่งโรงเรียน • r = ' + (r == null ? '–' : fmt(r, 2)) + ' • โรงเรียนที่เกรดเฉลี่ย ≥ ' + hi + ' แต่ O-NET ต่ำกว่าประเทศ: ' + gap.length + ' แห่ง') +
+    chartScatter(pts.map(p => ({ x: p.x, y: p.y, t: sName(p.s) + ' • เกรด ' + fmt(p.x) + ' • O-NET ' + sgn(p.y, 1), c: (p.x >= hi && p.y <= -b) ? '#dc2626' : '#64748b' })), { xl: 'เกรดเฉลี่ยกลุ่มสาระ ' + g.k, yl: 'ผลต่าง O-NET', hx: hi }) + '</div>' +
+    '<div class="grid g2"><div class="card"><h3>สรุปช่องว่างรายวิชา</h3><div class="sub">ผลการเรียนในโรงเรียน vs ผลทดสอบระดับชาติ</div>' + tbl(['วิชา', { h: 'ค่า r', c: 'n' }, { h: 'เกรดสูงแต่ O-NET ต่ำ (รร.)', c: 'n' }], summ.map(x => [SUBJ_NAME[x.cn], x.r == null ? '–' : fmt(x.r, 2), x.gap + '/' + x.n])) + '<div class="small muted" style="margin-top:8px">r ใกล้ +1 = ผลการเรียนสูงตามด้วย O-NET สูง; ใกล้ 0 = ไม่สัมพันธ์กัน</div></div>' +
+    '<div class="card"><h3>โรงเรียนที่เกรดสูงแต่ O-NET ต่ำ</h3><div class="sub">ควรทบทวนการวัดผลและความสอดคล้องกับสมรรถนะ</div>' + tbl(['โรงเรียน', { h: 'เกรด', c: 'n' }, { h: 'ผลต่าง O-NET', c: 'n' }], gap.sort((a, c) => a.y - c.y).map(p => [esc(sName(p.s)), fmt(p.x), dfx(p.y)])) + '</div></div>' +
+    '<div class="note info">หมายเหตุ: มาตรฐานที่ต่ำทั้งภายใน–ภายนอก ต้องมีข้อมูลผลการเรียนรายมาตรฐานของโรงเรียน (ขณะนี้ระบบเก็บเฉพาะรายกลุ่มสาระ) — เพิ่มในรอบพัฒนาถัดไปได้</div></div>';
+};
+
+/* ---------- Module 6: ติดตามผลการพัฒนา (Improvement Tracking) ---------- */
+const METHODS = ['อบรม', 'นิเทศ', 'โค้ช', 'PLC', 'อื่น ๆ'], STATUS = ['วางแผน', 'ดำเนินการ', 'ติดตามผล', 'เสร็จสิ้น'];
+const SUGG = [['คะแนนการอ่านต่ำ', 'พัฒนาครูด้านการจัดการเรียนรู้เพื่อส่งเสริมการอ่าน', 'นิเทศชั้นเรียน', 'อบรม'], ['คะแนนด้านการคิดคำนวณต่ำ', 'พัฒนาการออกแบบกิจกรรมแก้ปัญหาทางคณิตศาสตร์', 'ตรวจแผนและสังเกตชั้นเรียน', 'โค้ช'], ['คะแนนด้านการคิดวิเคราะห์ต่ำ', 'พัฒนาการจัดการเรียนรู้แบบ Active Learning', 'สังเกตพฤติกรรมผู้เรียน', 'อบรม'], ['ผลสัมฤทธิ์ไม่พัฒนาต่อเนื่อง', 'จัดทำ PLC วิเคราะห์ปัญหารายโรงเรียน', 'ติดตามคะแนนรายภาคเรียน', 'PLC']];
+PAGES.imp = function () {
+  const L = Object.values(col('improve')).sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))), f = S.tab.impf || '';
+  const rows = L.filter(r => !f || r.status === f), cnt = k => L.filter(r => r.status === k).length;
+  return '<div class="stack"><div class="hero"><h2>Improvement Tracking</h2><p>ประเด็นที่ต้องการพัฒนา → แนวทางการพัฒนา → ผลการดำเนินงาน → ผลลัพธ์ที่เกิดขึ้น</p></div>' +
+    '<div class="grid g4">' + STATUS.map(k => '<div class="card kpi"><div class="l">' + k + '</div><div class="v" data-count="' + cnt(k) + '">0</div><div class="s">รายการ</div></div>').join('') + '</div>' +
+    '<div class="card">' + secHead('รายการติดตามการพัฒนา', '', (isAdmin() ? '<button class="btn pri noprint" onclick="editImp()">➕ เพิ่มรายการ</button>' : '')) +
+    '<div class="row noprint" style="margin-bottom:10px"><div>' + sel('impf', [['', 'ทุกสถานะ']].concat(STATUS.map(s => [s, s])), f, 'setImpF') + '</div></div>' +
+    tbl(['โรงเรียน', 'ประเด็นที่ต้องพัฒนา', 'แนวทางการพัฒนา', 'วิธีติดตาม', { h: 'ครู/แผน', c: 'n' }, 'ผลลัพธ์', 'สถานะ', ''], rows.map(r => [r.s ? esc(sName(r.s)) : '<span class="muted">ทั้งสังกัด</span>', esc(r.issue), esc(r.plan) + ' ' + bdg(r.method, 'b'), esc(r.track || ''), (r.teachers || 0) + ' / ' + (r.plans || 0), '<span class="small">' + esc(r.outcome || '–') + '</span>', bdg(r.status, r.status === 'เสร็จสิ้น' ? 'g' : r.status === 'วางแผน' ? 'n' : 'y'), isAdmin() ? '<button class="btn sm noprint" onclick="editImp(\'' + r.id + '\')">แก้ไข</button>' : ''])) + '</div>' +
+    '<div class="card"><h3>ตัวอย่างการเชื่อมโยงผลวิเคราะห์ → แนวทางพัฒนา → วิธีติดตาม</h3><div class="sub">กด "ใช้เป็นต้นแบบ" เพื่อสร้างรายการใหม่</div>' +
+    tbl(['ผลการวิเคราะห์', 'แนวทางการพัฒนา', 'วิธีติดตาม', ''], SUGG.map((s, i) => [esc(s[0]), esc(s[1]), esc(s[2]), isAdmin() ? '<button class="btn sm noprint" onclick="editImp(null,' + i + ')">ใช้เป็นต้นแบบ</button>' : ''])) + '</div></div>';
+};
+function setImpF(v) { S.tab.impf = v; render(); }
+async function editImp(id, sg) {
+  if (!(await needAuth())) return; if (!isAdmin()) { toast('เฉพาะผู้ดูแลเพิ่ม/แก้ไขรายการติดตามได้', 'er'); return; }
+  const r = id ? Object.assign({}, col('improve')[id]) : (sg != null ? { issue: SUGG[sg][0], plan: SUGG[sg][1], track: SUGG[sg][2], method: SUGG[sg][3], status: 'วางแผน' } : { status: 'วางแผน', method: 'อบรม' });
+  const F = (k, lab, type) => '<div class="grow"><label class="f">' + lab + '</label><input type="' + (type || 'text') + '" id="im_' + k + '" value="' + esc(r[k] == null ? '' : r[k]) + '" style="width:100%"/></div>';
+  openModal('<h3>' + (id ? 'แก้ไข' : 'เพิ่ม') + 'รายการติดตามการพัฒนา</h3><div class="row"><div class="grow"><label class="f">โรงเรียน</label>' + sel('im_s', [['', 'ทั้งสังกัด']].concat(schoolOpts()), r.s || '', 'void') + '</div></div><div class="row" style="margin-top:10px">' + F('issue', 'ประเด็นที่ต้องพัฒนา (จากผลการวิเคราะห์)') + '</div><div class="row" style="margin-top:10px">' + F('plan', 'แนวทางการพัฒนา') + '</div>' +
+    '<div class="row" style="margin-top:10px"><div class="grow"><label class="f">รูปแบบ</label>' + sel('im_method', METHODS.map(m => [m, m]), r.method, 'void') + '</div><div class="grow"><label class="f">สถานะ</label>' + sel('im_status', STATUS.map(m => [m, m]), r.status, 'void') + '</div></div><div class="row" style="margin-top:10px">' + F('track', 'วิธีติดตาม') + '</div>' +
+    '<div class="row" style="margin-top:10px">' + F('teachers', 'ครูที่ได้รับการพัฒนา (คน)', 'number') + F('plans', 'แผนจัดการเรียนรู้ที่ปรับปรุง (ฉบับ)', 'number') + F('date', 'วันที่ (พ.ศ.)') + '</div><div style="margin-top:10px"><label class="f">ผลลัพธ์ที่เกิดขึ้น (ผลประเมินสมรรถนะ/ผลสัมฤทธิ์ที่เปลี่ยนแปลง)</label><textarea id="im_outcome">' + esc(r.outcome || '') + '</textarea></div>' +
+    '<div class="act">' + (id ? '<button class="btn dng" onclick="delImp(\'' + id + '\')">ลบ</button>' : '') + '<button class="btn" onclick="closeModal()">ยกเลิก</button><button class="btn pri" onclick="saveImp(\'' + (id || '') + '\')">บันทึก</button></div>');
+}
+function void_() { }
+window['void'] = function () { };
+async function saveImp(id) {
+  const g = k => $('#im_' + k).value.trim(), rid = id || 'i' + uid();
+  if (!g('issue')) { toast('กรุณากรอกประเด็นที่ต้องพัฒนา', 'er'); return; }
+  const data = { id: rid, s: g('s'), issue: g('issue'), plan: g('plan'), method: g('method'), track: g('track'), status: g('status'), teachers: +g('teachers') || 0, plans: +g('plans') || 0, date: g('date'), outcome: g('outcome') };
+  try { await commit([{ op: 'set', c: 'improve', id: rid, data }]); closeModal(); toast('บันทึกแล้ว', 'ok'); render(); } catch (e) { toast(e.message, 'er'); }
+}
+async function delImp(id) { if (!(await ask('ลบรายการนี้?', { title: 'ยืนยันการลบ', ok: 'ลบ' }))) return; try { await commit([{ op: 'delete', c: 'improve', id }]); toast('ลบแล้ว', 'ok'); render(); } catch (e) { toast(e.message, 'er'); } }
+
+/* ===================== Module 1: นำเข้าข้อมูล (PDF O-NET • ผลการเรียน • โรงเรียน) ===================== */
+const IMP = { results: [], busy: false, acadRows: null };
+const PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+const FORM_NAME = { 1: 'ฉบับ 1 คะแนนรายบุคคล', 2: 'ฉบับ 2 สถิติรายมาตรฐาน', 3: 'ฉบับ 3 ระดับคุณภาพ', 4: 'ฉบับ 4 การกระจายคะแนน', 5: 'ฉบับ 5 สถิติรายสาระ', 6: 'ฉบับ 6 สถิติรายวิชา' };
+const loadScript = (src, test) => new Promise((res, rej) => { if (test()) return res(); const s = document.createElement('script'); s.src = src; s.onload = () => res(); s.onerror = () => rej(new Error('โหลดไลบรารีไม่สำเร็จ (ตรวจอินเทอร์เน็ต)')); document.head.appendChild(s); });
+async function ensurePdfjs() {
+  for (let i = 0; i < 40 && !window.pdfjsLib; i++) { if (i === 0) { try { await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', () => !!window.pdfjsLib); } catch (e) { } } await sleep(100); }
+  if (!window.pdfjsLib) throw new Error('โหลดตัวอ่าน PDF ไม่สำเร็จ (ตรวจอินเทอร์เน็ต)');
+  pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
+}
+async function readPdfPages(file) {
+  const buf = await file.arrayBuffer(), doc = await pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise, pages = [];
+  for (let i = 1; i <= doc.numPages; i++) { const tc = await (await doc.getPage(i)).getTextContent(); pages.push(tc.items.map(t => ({ x: t.transform[4], y: t.transform[5], s: t.str }))); }
+  return pages;
+}
+async function handlePdfFiles(files) {
+  files = [...files].filter(f => /\.pdf$/i.test(f.name)); if (!files.length) { toast('เลือกไฟล์ PDF จากระบบ O-NET เท่านั้น', 'er'); return; }
+  IMP.busy = true; IMP.pct = 0; showImpProgress();
+  try { await ensurePdfjs(); } catch (e) { IMP.busy = false; toast(e.message, 'er'); render(); return; }
+  for (let i = 0; i < files.length; i++) {
+    try { const r = OnetParser.parse(await readPdfPages(files[i]), files[i].name); IMP.results = IMP.results.filter(x => x.file !== r.file); IMP.results.push(r); }
+    catch (e) { IMP.results.push({ file: files[i].name, error: 'อ่านไฟล์ไม่สำเร็จ: ' + e.message }); }
+    IMP.pct = Math.round((i + 1) / files.length * 100); showImpProgress(); await sleep(10);
+  }
+  IMP.busy = false; render();
+}
+function showImpProgress() { const el = $('#impProg'); if (el) { el.style.display = 'block'; $('i', el).style.width = (IMP.pct || 5) + '%'; } }
+function groupResults() {
+  const G = {};
+  IMP.results.filter(r => !r.error && r.school && r.school.code).forEach(r => {
+    const k = r.school.code + '|' + r.year + '|' + r.level, g = G[k] = G[k] || { code: r.school.code, year: r.year, level: r.level, name: r.school.name, size: r.school.size, loc: r.school.loc, forms: [], subj: {}, warn: [], nameGood: null };
+    g.forms.push(r.form); (r.warn || []).forEach(w => g.warn.push(r.file + ': ' + w));
+    if (r.form === 3 && r.school.name) g.nameGood = r.school.name;
+    if (r.skipped) return;
+    if (r.subj) Object.keys(r.subj).forEach(c => { const s = g.subj[c] = g.subj[c] || {}, x = r.subj[c]; s.lv = Object.assign(s.lv || {}, x.lv); if (r.form === 2) s.std = x.std; if (r.form === 5) s.cont = x.cont; });
+    if (r.dist) Object.keys(r.dist).forEach(c => { (g.subj[c] = g.subj[c] || {}).dist = r.dist[c]; });
+    if (r.ind) Object.keys(r.ind.subj).forEach(c => { (g.subj[c] = g.subj[c] || {}).ind = r.ind.subj[c]; });
+  });
+  return Object.values(G);
+}
+function buildImportOps(groups) {
+  const ops = [];
+  groups.forEach(g => {
+    const ex = col('schools')[g.code], nm = g.nameGood || (ex && ex.name) || g.name;
+    if (!ex) ops.push({ op: 'set', c: 'schools', id: g.code, data: { code: g.code, name: nm, size: g.size, loc: g.loc, nameCheck: !g.nameGood } });
+    else { const u = {}; if (g.nameGood && ex.name !== g.nameGood) { u.name = g.nameGood; u.nameCheck = false; } if (!ex.size && g.size) u.size = g.size; if (!ex.loc && g.loc) u.loc = g.loc; if (Object.keys(u).length) ops.push({ op: 'merge', c: 'schools', id: g.code, data: u }); }
+    Object.keys(g.subj).forEach(c => { const d = g.subj[c]; if (!d.lv && !d.dist && !d.ind) return; ops.push({ op: 'merge', c: 'onet', id: g.code + '|' + g.year + '|' + g.level + '|' + c, data: Object.assign({ s: g.code, y: g.year, l: g.level, c }, d) }); });
+  });
+  return ops;
+}
+async function saveImport() {
+  const groups = groupResults(); if (!groups.length) return;
+  if (!(await needAuth())) return;
+  if (AUTH && AUTH.role === 'school' && !SIM) { const bad = groups.filter(g => g.code !== AUTH.sch); if (bad.length) { alertBox('บัญชีโรงเรียนนำเข้าได้เฉพาะข้อมูลของโรงเรียนตนเอง (' + esc(sName(AUTH.sch)) + ') — พบไฟล์ของรหัสโรงเรียน: ' + bad.map(b => esc(b.code)).join(', ')); return; } }
+  const ops = buildImportOps(groups); const b = $('#btnSaveImp'); if (b) b.disabled = true;
+  try { await commit(ops, p => { IMP.pct = p; showImpProgress(); }); toast('นำเข้าข้อมูลสำเร็จ ' + groups.length + ' ชุด', 'ok'); IMP.results = []; S.year = Math.max(...groups.map(g => g.year)); render(); }
+  catch (e) { toast(e.message, 'er'); if (b) b.disabled = false; }
+}
+function impResultTable() {
+  const groups = groupResults(), bad = IMP.results.filter(r => r.error);
+  let h = '';
+  if (bad.length) h += '<div class="note bad" style="margin-bottom:12px"><b>ไฟล์ที่อ่านไม่ได้</b><br/>' + bad.map(r => esc(r.file) + ' — ' + esc(r.error)).join('<br/>') + '</div>';
+  groups.forEach(g => {
+    const exist = Object.keys(g.subj).some(c => col('onet')[g.code + '|' + g.year + '|' + g.level + '|' + c]);
+    const sc = col('schools')[g.code];
+    h += '<div class="card" style="margin-bottom:14px"><div class="row" style="justify-content:space-between"><div><h3>' + esc(g.nameGood || (sc && sc.name) || g.name || g.code) + '</h3><div class="sub">รหัส ' + esc(g.code) + ' • ปีการศึกษา ' + g.year + ' • ชั้น ' + (LEVEL_NAME[g.level] || g.level) + ' • ขนาด ' + esc(g.size || '–') + ' • ' + esc(g.loc || '') + '</div></div><div>' + (exist ? bdg('มีข้อมูลเดิม จะอัปเดตทับ', 'y') : bdg('ข้อมูลใหม่', 'g')) + (!g.nameGood && !(sc && !sc.nameCheck) ? ' ' + bdg('ตรวจชื่อโรงเรียน', 'y') : '') + '</div></div>' +
+      '<div style="margin:4px 0 10px">' + [1, 2, 3, 4, 5, 6].map(f => '<span class="bdg ' + (g.forms.includes(f) ? 'g' : 'n') + '" style="margin:2px">' + (g.forms.includes(f) ? '✓ ' : '') + FORM_NAME[f] + '</span>').join('') + '</div>';
+    const cns = Object.keys(g.subj);
+    h += tbl(['วิชา', { h: 'ผู้สอบ', c: 'n' }, { h: 'คะแนนโรงเรียน', c: 'n' }, { h: 'ประเทศ', c: 'n' }, { h: 'ผลต่าง', c: 'n' }, { h: 'มาตรฐาน', c: 'n' }, 'ข้อมูลเสริม'], cns.map(c => { const d = g.subj[c], lv = d.lv || {}, s = lv.sch, n = lv.nat; return [esc(OnetParser.SUBJ[c] || c) + ' <span class="muted small">(' + c + ')</span>', s ? fmtI(s[0]) : '–', s ? fmt(s[1]) : '–', n ? fmt(n[1]) : '–', s && n ? dfx(s[1] - n[1]) : '–', d.std ? Object.keys(d.std).length : '–', [d.dist ? 'กระจายคะแนน' : '', d.cont ? 'รายสาระ' : '', d.ind ? 'รายบุคคล(สรุป)' : ''].filter(Boolean).join(', ') || '–']; }));
+    if (g.warn.length) h += '<div class="note" style="margin-top:10px">' + g.warn.map(esc).join('<br/>') + '</div>';
+    h += '</div>';
+  });
+  return h || '';
+}
+PAGES.data = function () {
+  const t = curTab('data', 'pdf');
+  let h = tabsHtml('data', [['pdf', '📄 นำเข้า PDF จาก O-NET'], ['acad', '🎓 ผลสัมฤทธิ์ทางการเรียน'], ['sch', '🏫 ข้อมูลโรงเรียน'], ['mng', '🗂 จัดการข้อมูลที่นำเข้า']]);
+  if (t === 'pdf') {
+    const groups = groupResults();
+    h += '<div class="stack"><div class="card">' + secHead('นำเข้ารายงาน O-NET ตามแบบฟอร์มของ สทศ. (PDF) ได้ทันที', 'ลากไฟล์มาวางได้หลายไฟล์พร้อมกัน — รองรับฉบับที่ 1, 2, 4, 5, 6 (ฉบับที่ 3 ใช้ดึงชื่อโรงเรียนที่ถูกต้อง) ทั้ง ม.3 และ ม.6 ระบบอ่านในเครื่องของคุณ ไม่ส่งไฟล์ PDF ออกไปที่ใด') +
+      '<div class="drop" id="drop" onclick="$(\'#pdfIn\').click()"><div style="font-size:34px">📄</div><b>ลากไฟล์ PDF มาวางที่นี่ หรือแตะเพื่อเลือกไฟล์</b><div class="muted small" style="margin-top:6px">เช่น StatbySchool_2568_M3_….pdf • SbjStatbySchool • ScoreDistributionBySchool • ContentStatbySchool • IndividualScore</div><input type="file" id="pdfIn" accept=".pdf,application/pdf" multiple hidden/></div>' +
+      '<div class="prog" id="impProg" style="margin-top:12px;display:' + (IMP.busy ? 'block' : 'none') + '"><i></i></div>' +
+      '<div class="note info" style="margin-top:12px">🔒 ความเป็นส่วนตัว: ไฟล์ฉบับที่ 1 (คะแนนรายบุคคล) มีชื่อและเลขประจำตัวประชาชนนักเรียน — ระบบ<b>ไม่เก็บ</b>ชื่อ/เลขบัตร เก็บเฉพาะค่าสรุปรายวิชา (จำนวนผู้สอบ ขาดสอบ คะแนนเฉลี่ย)</div></div>' +
+      (groups.length ? '<div>' + impResultTable() + '<div class="row" style="justify-content:flex-end;position:sticky;bottom:12px"><button class="btn" onclick="IMP.results=[];render()">ล้างรายการ</button><button class="btn pri glow" id="btnSaveImp" onclick="saveImport()">💾 บันทึก ' + groups.length + ' ชุดข้อมูลเข้าฐานข้อมูล</button></div></div>' : (IMP.results.length ? impResultTable() : '')) + '</div>';
+    return h;
+  }
+  if (t === 'acad') return h + acadImportHtml();
+  if (t === 'sch') return h + schoolsHtml();
+  return h + manageHtml();
+};
+PAGES.after_data = function () {
+  const d = $('#drop'); if (!d) return; const inp = $('#pdfIn');
+  inp.addEventListener('change', () => { if (inp.files.length) handlePdfFiles(inp.files); inp.value = ''; });
+  ['dragenter', 'dragover'].forEach(ev => d.addEventListener(ev, e => { e.preventDefault(); d.classList.add('ov'); }));
+  ['dragleave', 'drop'].forEach(ev => d.addEventListener(ev, e => { e.preventDefault(); d.classList.remove('ov'); }));
+  d.addEventListener('drop', e => { if (e.dataTransfer.files.length) handlePdfFiles(e.dataTransfer.files); });
+  const f = $('#acFile'); if (f) f.addEventListener('change', () => { if (f.files[0]) readAcadFile(f.files[0]); f.value = ''; });
+};
+
+/* ---------- ผลสัมฤทธิ์: ฟอร์มออนไลน์ + Excel/CSV ---------- */
+const ACOLS = ['0', '1', '1.5', '2', '2.5', '3', '3.5', '4'];
+function acadImportHtml() {
+  const lst = idx().schools, sc = (AUTH && AUTH.role === 'school' && !SIM) ? AUTH.sch : (S.sch && col('schools')[S.sch] ? S.sch : (lst[0] ? lst[0].code : ''));
+  const yr = S.year || 2568;
+  return '<div class="stack"><div class="card">' + secHead('บันทึกผลการเรียนผ่านแบบฟอร์มออนไลน์', 'กรอกจำนวนผู้เรียนในแต่ละระดับผลการเรียน (0–4) รายกลุ่มสาระ ระบบคำนวณค่าเฉลี่ย ร้อยละผ่านเกณฑ์ และระดับ 3 ขึ้นไปให้อัตโนมัติ') +
+    (lst.length ? '<div class="row"><div class="grow"><label class="f">โรงเรียน</label>' + sel('acS', lst.map(s => [s.code, sName(s.code)]), sc, 'acLoad') + '</div><div><label class="f">ปีการศึกษา</label><input type="number" id="acY" value="' + yr + '" style="width:110px" onchange="acLoad($(\'#acS\').value)"/></div></div>' +
+      '<div class="tw" style="margin-top:12px"><table class="t"><thead><tr><th>กลุ่มสาระ</th>' + ACOLS.map(c => '<th class="n">ระดับ ' + c + '</th>').join('') + '<th class="n">รวม</th><th class="n">เฉลี่ย</th><th class="n">ผ่าน %</th><th class="n">3+ %</th></tr></thead><tbody>' +
+      GROUPS.map((g, gi) => '<tr data-g="' + gi + '"><td>' + esc(g.k) + '</td>' + ACOLS.map((c, ci) => '<td><input type="number" min="0" class="acin" data-g="' + gi + '" data-c="' + ci + '" style="width:62px" oninput="acCalc(' + gi + ')"/></td>').join('') + '<td class="n" id="acN' + gi + '">0</td><td class="n" id="acM' + gi + '">–</td><td class="n" id="acP' + gi + '">–</td><td class="n" id="acT' + gi + '">–</td></tr>').join('') + '</tbody></table></div>' +
+      '<div class="row" style="margin-top:12px;justify-content:flex-end"><button class="btn pri" onclick="acSave()">💾 บันทึกผลการเรียน</button></div>' : empty('ต้องเพิ่มข้อมูลโรงเรียนก่อน (แท็บ "ข้อมูลโรงเรียน")')) + '</div>' +
+    '<div class="card">' + secHead('นำเข้าจากไฟล์ Excel / CSV', 'หัวตารางที่รองรับ: รหัสโรงเรียน, ปีการศึกษา, กลุ่มสาระ และ (จำนวนผู้เรียนระดับ 0, 1, 1.5, 2, 2.5, 3, 3.5, 4) หรือ (จำนวนนักเรียน, คะแนนเฉลี่ย, ร้อยละผ่านเกณฑ์, ร้อยละระดับ 3 ขึ้นไป)') +
+    '<div class="row"><button class="btn" onclick="acTemplate()">⬇️ ดาวน์โหลดแม่แบบ CSV</button><label class="btn pri" style="cursor:pointer">📂 เลือกไฟล์ .xlsx / .csv<input type="file" id="acFile" accept=".xlsx,.xls,.csv" hidden/></label></div><div id="acPrev" style="margin-top:12px">' + (IMP.acadRows ? acPreviewHtml() : '') + '</div></div></div>';
+}
+PAGES.after_data2 = null;
+function acLoad(code) {
+  S.sch = code; const y = +($('#acY') || {}).value || S.year;
+  GROUPS.forEach((g, gi) => { const r = col('acad')[code + '|' + y + '|' + g.k]; ACOLS.forEach((c, ci) => { const el = $('.acin[data-g="' + gi + '"][data-c="' + ci + '"]'); if (el) el.value = r && r.c ? r.c[ci] : ''; }); acCalc(gi); });
+}
+function acCalc(gi) {
+  const c = ACOLS.map((x, ci) => +($('.acin[data-g="' + gi + '"][data-c="' + ci + '"]').value) || 0), st = acadStat({ c });
+  $('#acN' + gi).textContent = fmtI(st.n); $('#acM' + gi).textContent = st.n ? fmt(st.mean) : '–'; $('#acP' + gi).textContent = st.n ? fmt(st.pass, 1) : '–'; $('#acT' + gi).textContent = st.n ? fmt(st.p3, 1) : '–';
+}
+async function acSave() {
+  if (!(await needAuth())) return; const code = $('#acS').value, y = +$('#acY').value; if (!code || !y) { toast('เลือกโรงเรียนและปีการศึกษา', 'er'); return; }
+  if (AUTH && AUTH.role === 'school' && !SIM && AUTH.sch !== code) { toast('บันทึกได้เฉพาะโรงเรียนของท่าน', 'er'); return; }
+  const ops = []; GROUPS.forEach((g, gi) => { const c = ACOLS.map((x, ci) => +($('.acin[data-g="' + gi + '"][data-c="' + ci + '"]').value) || 0); if (sum(c) > 0) ops.push({ op: 'set', c: 'acad', id: code + '|' + y + '|' + g.k, data: { s: code, y, g: g.k, c } }); });
+  if (!ops.length) { toast('ยังไม่ได้กรอกข้อมูล', 'er'); return; }
+  try { await commit(ops); toast('บันทึกผลการเรียน ' + ops.length + ' กลุ่มสาระแล้ว', 'ok'); S.year = y; renderChrome(); } catch (e) { toast(e.message, 'er'); }
+}
+function csvParse(txt) {
+  const rows = []; let r = [], f = '', q = false; txt = txt.replace(/^﻿/, '');
+  for (let i = 0; i < txt.length; i++) { const ch = txt[i]; if (q) { if (ch === '"') { if (txt[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += ch; } else if (ch === '"') q = true; else if (ch === ',' || ch === '\t') { r.push(f); f = ''; } else if (ch === '\n') { r.push(f); rows.push(r); r = []; f = ''; } else if (ch !== '\r') f += ch; }
+  if (f !== '' || r.length) { r.push(f); rows.push(r); } return rows.filter(x => x.some(c => String(c).trim() !== ''));
+}
+function acTemplate() {
+  const code = (idx().schools[0] || {}).code || '3033100109'; const head = ['รหัสโรงเรียน', 'ปีการศึกษา', 'กลุ่มสาระ'].concat(ACOLS.map(c => 'ระดับ ' + c));
+  const rows = [head].concat(GROUPS.map(g => [code, S.year || 2568, g.k].concat(ACOLS.map(() => ''))));
+  downloadBlob('แม่แบบผลการเรียน.csv', 'text/csv;charset=utf-8', '﻿' + rows.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\r\n'));
+}
+function matchGroup(s) { s = String(s).replace(/\s+/g, ''); if (/ต่างประเทศ|อังกฤษ/.test(s)) return 'ภาษาต่างประเทศ'; if (/ไทย/.test(s)) return 'ภาษาไทย'; if (/คณิต/.test(s)) return 'คณิตศาสตร์'; if (/วิทย/.test(s)) return 'วิทยาศาสตร์และเทคโนโลยี'; if (/สังคม/.test(s)) return 'สังคมศึกษา ศาสนาและวัฒนธรรม'; if (/สุข|พล/.test(s)) return 'สุขศึกษาและพลศึกษา'; if (/ศิลป/.test(s)) return 'ศิลปะ'; if (/การงาน|อาชีพ/.test(s)) return 'การงานอาชีพ'; return null; }
+async function readAcadFile(file) {
+  try {
+    let rows;
+    if (/\.csv$/i.test(file.name)) rows = csvParse(await file.text());
+    else { await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', () => !!window.XLSX); const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' }); rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false, defval: '' }); }
+    const hd = rows[0].map(x => String(x).replace(/\s+/g, '')), ix = {}, cc = {};
+    hd.forEach((h, i) => { if (/รหัส/.test(h)) ix.code = i; else if (/ปี/.test(h)) ix.year = i; else if (/สาระ/.test(h)) ix.g = i; else if (/จำนวน(นักเรียน|ผู้เรียน)$/.test(h)) ix.n = i; else if (/เฉลี่ย/.test(h)) ix.mean = i; else if (/ผ่าน/.test(h)) ix.pass = i; else if (/(3ขึ้นไป|ระดับ3\+|3\+)/.test(h)) ix.p3 = i; else { const m = h.match(/^(?:ระดับ|ผลการเรียน|เกรด)?(0|1|1\.5|2|2\.5|3|3\.5|4)$/); if (m) cc[m[1]] = i; } });
+    const out = [], bad = [];
+    rows.slice(1).forEach((r, ri) => {
+      const code = String(r[ix.code] || '').trim(), y = parseInt(r[ix.year]), g = matchGroup(r[ix.g]);
+      if (!code || !y || !g) { bad.push('แถว ' + (ri + 2) + ': ข้อมูลไม่ครบ (รหัส/ปี/กลุ่มสาระ)'); return; }
+      if (!col('schools')[code]) { bad.push('แถว ' + (ri + 2) + ': ไม่พบรหัสโรงเรียน ' + code + ' ในระบบ'); return; }
+      const rec = { s: code, y, g };
+      if (Object.keys(cc).length >= 6) { rec.c = ACOLS.map(k => cc[k] != null ? (+String(r[cc[k]]).replace(/,/g, '') || 0) : 0); if (!sum(rec.c)) { bad.push('แถว ' + (ri + 2) + ': จำนวนผู้เรียนเป็นศูนย์'); return; } }
+      else { rec.n = +String(r[ix.n]).replace(/,/g, '') || 0; rec.mean = num(r[ix.mean]); rec.pass = num(r[ix.pass]); rec.p3 = num(r[ix.p3]); if (rec.mean == null) { bad.push('แถว ' + (ri + 2) + ': ไม่มีคะแนนเฉลี่ย/จำนวนระดับ'); return; } }
+      out.push(rec);
+    });
+    IMP.acadRows = { rows: out, bad }; $('#acPrev').innerHTML = acPreviewHtml();
+  } catch (e) { toast(e.message, 'er'); }
+}
+function acPreviewHtml() {
+  const A = IMP.acadRows; if (!A) return '';
+  return '<div class="note ' + (A.rows.length ? 'info' : 'bad') + '">อ่านได้ ' + A.rows.length + ' แถว' + (A.bad.length ? ' • ข้ามไป ' + A.bad.length + ' แถว' : '') + '</div>' + (A.bad.length ? '<div class="small neg" style="margin:8px 0">' + A.bad.slice(0, 8).map(esc).join('<br/>') + '</div>' : '') +
+    (A.rows.length ? tbl(['โรงเรียน', 'ปี', 'กลุ่มสาระ', { h: 'นักเรียน', c: 'n' }, { h: 'เฉลี่ย', c: 'n' }, { h: 'ผ่าน %', c: 'n' }], A.rows.slice(0, 12).map(r => { const st = acadStat(r); return [esc(sName(r.s)), r.y, esc(r.g), fmtI(st.n), fmt(st.mean), fmt(st.pass, 1)]; })) + '<div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn" onclick="IMP.acadRows=null;render()">ยกเลิก</button><button class="btn pri" onclick="acImportSave()">💾 บันทึก ' + A.rows.length + ' แถว</button></div>' : '');
+}
+async function acImportSave() {
+  if (!(await needAuth())) return; let rows = IMP.acadRows.rows;
+  if (AUTH && AUTH.role === 'school' && !SIM) rows = rows.filter(r => r.s === AUTH.sch);
+  try { await commit(rows.map(r => ({ op: 'set', c: 'acad', id: r.s + '|' + r.y + '|' + r.g, data: r }))); toast('นำเข้าผลการเรียน ' + rows.length + ' แถวแล้ว', 'ok'); IMP.acadRows = null; render(); } catch (e) { toast(e.message, 'er'); }
+}
+
+/* ---------- ข้อมูลโรงเรียน ---------- */
+function schoolsHtml() {
+  const L = idx().schools, canEdit = isAdmin();
+  return '<div class="stack"><div class="card">' + secHead('ข้อมูลพื้นฐานโรงเรียน (' + L.length + ' แห่ง)', 'รหัสโรงเรียน ชื่อ ขนาด จำนวนนักเรียน/ครู และระดับชั้นที่เปิดสอน', canEdit ? '<div class="row noprint"><button class="btn pri" onclick="editSchool()">➕ เพิ่มโรงเรียน</button><button class="btn" onclick="bulkSchools()">📋 วางรายชื่อหลายโรงเรียน</button></div>' : '') +
+    tbl(['รหัส', 'ชื่อโรงเรียน', 'ขนาด', 'ที่ตั้ง', { h: 'นักเรียน', c: 'n' }, { h: 'ครู', c: 'n' }, 'ระดับชั้น', ''], L.map(s => [esc(s.code), esc(fixLabel(s.name)) + (s.nameCheck ? ' ' + bdg('ตรวจชื่อ', 'y') : ''), esc(s.size || '–'), esc(s.loc || '–'), fmtI(s.students), fmtI(s.teachers), esc(s.levels || '–'), (canEdit || (AUTH && AUTH.sch === s.code)) ? '<button class="btn sm noprint" onclick="editSchool(\'' + s.code + '\')">แก้ไข</button>' : ''])) + '</div></div>';
+}
+function editSchool(code) {
+  const s = code ? Object.assign({}, col('schools')[code]) : {}; const F = (k, l, t, w) => '<div class="grow"><label class="f">' + l + '</label><input type="' + (t || 'text') + '" id="sc_' + k + '" value="' + esc(s[k] == null ? '' : s[k]) + '" style="width:100%"' + (k === 'code' && code ? ' disabled' : '') + '/></div>';
+  openModal('<h3>' + (code ? 'แก้ไข' : 'เพิ่ม') + 'โรงเรียน</h3><div class="row">' + F('code', 'รหัสโรงเรียน (10 หลัก)') + F('name', 'ชื่อโรงเรียน') + '</div><div class="row" style="margin-top:10px"><div class="grow"><label class="f">ขนาด</label>' + sel('sc_size', ['เล็ก', 'กลาง', 'ใหญ่', 'ใหญ่พิเศษ'].map(x => [x, x]), s.size || 'เล็ก', 'void') + '</div><div class="grow"><label class="f">ที่ตั้ง</label>' + sel('sc_loc', ['นอกเมือง', 'ในเมือง'].map(x => [x, x]), s.loc || 'นอกเมือง', 'void') + '</div></div><div class="row" style="margin-top:10px">' + F('students', 'จำนวนนักเรียน', 'number') + F('teachers', 'จำนวนครู', 'number') + F('levels', 'ระดับชั้นที่เปิดสอน') + '</div>' +
+    '<div class="act"><button class="btn" onclick="closeModal()">ยกเลิก</button><button class="btn pri" onclick="saveSchool(\'' + (code || '') + '\')">บันทึก</button></div>');
+}
+async function saveSchool(code) {
+  if (!(await needAuth())) return; const g = k => $('#sc_' + k).value.trim(), c = code || g('code');
+  if (!/^\d{6,12}$/.test(c) || !g('name')) { toast('กรุณากรอกรหัสโรงเรียน (ตัวเลข) และชื่อ', 'er'); return; }
+  const data = { code: c, name: g('name'), size: g('size'), loc: g('loc'), students: +g('students') || 0, teachers: +g('teachers') || 0, levels: g('levels'), nameCheck: false };
+  try { await commit([{ op: code ? 'merge' : 'set', c: 'schools', id: c, data }]); closeModal(); toast('บันทึกแล้ว', 'ok'); render(); } catch (e) { toast(e.message, 'er'); }
+}
+function bulkSchools() {
+  openModal('<h3>วางรายชื่อโรงเรียนหลายแห่ง</h3><div class="note info small">บรรทัดละ 1 โรงเรียน คั่นด้วยเครื่องหมายจุลภาคหรือแท็บ: <b>รหัสโรงเรียน, ชื่อ, ขนาด, จำนวนนักเรียน, จำนวนครู</b> (คัดลอกจาก Excel วางได้เลย)</div><textarea id="bulkT" style="min-height:200px;margin-top:10px" placeholder="3033100109, กระดุมทองวิทยา, เล็ก, 210, 14"></textarea><div class="act"><button class="btn" onclick="closeModal()">ยกเลิก</button><button class="btn pri" onclick="saveBulk()">นำเข้า</button></div>');
+}
+async function saveBulk() {
+  if (!(await needAuth())) return; const rows = csvParse($('#bulkT').value), ops = [];
+  rows.forEach(r => { const c = String(r[0]).trim(); if (/^\d{6,12}$/.test(c) && r[1]) ops.push({ op: 'merge', c: 'schools', id: c, data: { code: c, name: String(r[1]).trim(), size: String(r[2] || '').trim() || 'เล็ก', students: +r[3] || 0, teachers: +r[4] || 0, nameCheck: false } }); });
+  if (!ops.length) { toast('ไม่พบแถวที่ถูกต้อง', 'er'); return; }
+  try { await commit(ops); closeModal(); toast('เพิ่ม/อัปเดต ' + ops.length + ' โรงเรียน', 'ok'); render(); } catch (e) { toast(e.message, 'er'); }
+}
+
+/* ---------- จัดการข้อมูลที่นำเข้า ---------- */
+function manageHtml() {
+  const G = {}; idx().onet.forEach(r => { const k = r.s + '|' + r.y + '|' + r.l; const g = G[k] = G[k] || { s: r.s, y: r.y, l: r.l, ids: [], subj: [], std: 0, dist: 0, ind: 0, cont: 0 }; g.ids.push(r.s + '|' + r.y + '|' + r.l + '|' + r.c); g.subj.push(SUBJ_NAME[r.cn] || r.c); if (r.std) g.std++; if (r.dist) g.dist++; if (r.ind) g.ind++; if (r.cont) g.cont++; });
+  const L = Object.values(G).sort((a, b) => b.y - a.y || sName(a.s).localeCompare(sName(b.s), 'th')), ac = {}; idx().acad.forEach(r => { const k = r.s + '|' + r.y; ac[k] = (ac[k] || 0) + 1; });
+  return '<div class="stack"><div class="card">' + secHead('ข้อมูล O-NET ที่นำเข้าแล้ว (' + L.length + ' ชุด)') + tbl(['โรงเรียน', 'ปี', 'ชั้น', 'วิชา', 'มาตรฐาน', 'กระจายคะแนน', ''], L.map(g => [esc(sName(g.s)), g.y, LEVEL_NAME[g.l] || g.l, esc(g.subj.join(', ')), g.std ? '✓' : '–', g.dist ? '✓' : '–', isAdmin() ? '<button class="btn sm dng noprint" onclick="delOnet(\'' + g.ids.join('\',\'') + '\')">ลบ</button>' : ''])) + '</div>' +
+    '<div class="card">' + secHead('ข้อมูลผลการเรียนที่บันทึกแล้ว') + tbl(['โรงเรียน', 'ปี', { h: 'กลุ่มสาระ', c: 'n' }], Object.keys(ac).map(k => { const [s, y] = k.split('|'); return [esc(sName(s)), y, ac[k] + ' / 8']; })) + '</div></div>';
+}
+async function delOnet() {
+  const ids = [...arguments]; if (!(await ask('ลบข้อมูล O-NET ชุดนี้ (' + ids.length + ' รายการวิชา)? ย้อนกลับไม่ได้', { title: 'ยืนยันการลบ', ok: 'ลบ' }))) return;
+  try { await commit(ids.map(id => ({ op: 'delete', c: 'onet', id }))); toast('ลบแล้ว', 'ok'); render(); } catch (e) { toast(e.message, 'er'); }
+}
+
+/* ===================== ตั้งค่า + ศูนย์อัปเดต + Boot ===================== */
+const UPD = { info: null, loading: false, step: 0, timer: null, paused: false };
+PAGES.set = function () {
+  const t = curTab('set', 'gen'), st = getSettings();
+  let h = tabsHtml('set', [['gen', '🏷 ทั่วไป & เกณฑ์'], ['logo', '🖼 โลโก้'], ['lab', '✏️ ชื่อโรงเรียน/วิชา'], ['sec', '🔐 รหัสผ่าน'], ['sim', '🧪 โหมดจำลอง'], ['upd', '⬆️ อัปเดตระบบ']]);
+  if (t === 'gen') {
+    const F = (k, l, ty, w, step) => '<div><label class="f">' + l + '</label><input type="' + (ty || 'text') + '" id="st_' + k + '" value="' + esc(st[k]) + '" ' + (step ? 'step="' + step + '" ' : '') + 'style="width:' + (w || '100%') + '"/></div>';
+    return h + '<div class="stack"><div class="card">' + secHead('ข้อมูลทั่วไป') + '<div class="grid2">' + F('title', 'ชื่อระบบ') + F('short', 'ชื่อย่อ (แถบด้านข้าง)') + F('org', 'หน่วยงาน') + F('total', 'จำนวนโรงเรียนทั้งหมดในสังกัด', 'number') + '</div></div>' +
+      '<div class="card">' + secHead('เกณฑ์การแปลผล', 'ใช้กับสี เขียว/เหลือง/แดง และข้อความวินิจฉัยทั้งระบบ') + '<div class="grid2">' +
+      F('band', 'ช่วงเหลือง ± (คะแนนจากค่าเฉลี่ยประเทศ)', 'number', '100%', '0.1') + F('accHi', 'ผลการเรียน: จุดเด่น ≥', 'number', '100%', '0.1') + F('accMid', 'ผลการเรียน: ควรพัฒนา ≥ (ต่ำกว่านี้คือเร่งด่วน)', 'number', '100%', '0.1') + F('stdA', 'มาตรฐาน: ต้องปรับปรุงเร่งด่วน <', 'number') + F('stdB', 'มาตรฐาน: ควรพัฒนา <', 'number') + F('stdC', 'มาตรฐาน: พอใช้ <', 'number') + '</div>' +
+      '<div class="note info small" style="margin-top:10px">สี: ต่ำกว่าประเทศ ≥ ช่วงที่ตั้ง = แดง • ใกล้เคียง = เหลือง • สูงกว่า ≥ ช่วงที่ตั้ง = เขียว</div>' +
+      '<div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn pri" onclick="saveGen()">💾 บันทึกการตั้งค่า</button></div></div></div>';
+  }
+  if (t === 'logo') return h + '<div class="card">' + secHead('โลโก้ระบบ', 'แสดงที่แถบด้านข้าง หน้าเข้าสู่ระบบ ไอคอนแท็บ และหัวเอกสาร export') +
+    '<div class="row" style="gap:20px"><div style="width:120px;height:120px;border:1px solid var(--line);border-radius:22px;display:grid;place-items:center;background:#fff"><img id="logoPrev" src="' + esc(logoSrc()) + '" style="max-width:92px;max-height:92px;object-fit:contain"/></div><div class="grow"><div class="muted small" style="margin-bottom:10px">รองรับ PNG / JPG / SVG — ระบบย่อภาพไม่เกิน 512px อัตโนมัติ' + (MODE === 'gas' ? ' แล้วเก็บลง Google Drive' : ' (โหมดทดลอง: เก็บในเครื่องนี้ชั่วคราว)') + '</div><div class="row"><label class="btn pri" style="cursor:pointer">📂 เลือกรูปโลโก้<input type="file" id="logoIn" accept="image/*" hidden/></label>' + (st.logo ? '<button class="btn dng" onclick="removeLogo()">ลบโลโก้</button>' : '') + '</div></div></div></div>';
+  if (t === 'lab') {
+    const lm = st.labelMap || {}, names = {};
+    idx().schools.forEach(s => { names[s.name] = 1; }); Object.keys(lm).forEach(k => { names[k] = 1; });
+    const bad = idx().schools.filter(s => s.nameCheck);
+    return h + '<div class="card">' + secHead('แก้ชื่อที่อ่านจาก PDF ผิด', 'ไฟล์ PDF ของ สทศ. ภาษาไทยอาจเพี้ยน — ฉบับที่ 3 ให้ชื่อโรงเรียนถูกต้อง ส่วนชื่อที่ตรวจพบว่าเพี้ยนแก้ที่นี่') +
+      (bad.length ? '<div class="note" style="margin-bottom:10px">มี ' + bad.length + ' โรงเรียนที่ควรตรวจชื่อ</div>' : '') +
+      tbl(['รหัส', 'ชื่อที่ระบบมี', 'ชื่อที่ต้องการแสดง'], idx().schools.filter(s => s.nameCheck || lm[s.name]).map(s => [esc(s.code), esc(s.name), '<input class="lbIn" data-k="' + esc(s.name) + '" value="' + esc(lm[s.name] || '') + '" placeholder="พิมพ์ชื่อที่ถูกต้อง" style="width:100%"/>'])) +
+      '<div class="muted small" style="margin-top:8px">เคล็ดลับ: นำเข้า PDF ฉบับที่ 3 ของโรงเรียนนั้น ชื่อจะถูกต้องอัตโนมัติ' + '</div><div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn pri" onclick="saveLabels()">💾 บันทึก</button></div></div>';
+  }
+  if (t === 'sec') {
+    const adm = isAdmin() && !SIM;
+    return h + '<div class="stack"><div class="card">' + secHead('การเข้าสู่ระบบ', 'ดูข้อมูลได้ทุกคน • แก้ไข/นำเข้าต้องใช้รหัส') + '<div class="row"><div>' + (AUTH ? bdg('เข้าสู่ระบบแล้ว: ' + (AUTH.role === 'admin' ? 'ผู้ดูแล' : 'โรงเรียน ' + esc(sName(AUTH.sch))), 'g') : bdg('ยังไม่ได้เข้าสู่ระบบ', 'n')) + '</div><div class="grow"></div>' + (AUTH ? '<button class="btn" onclick="logout()">ออกจากระบบ</button>' : '<button class="btn pri" onclick="needAuth().then(render)">เข้าสู่ระบบ</button>') + '</div>' +
+      '<div class="note info small" style="margin-top:10px">รหัสผู้ดูแลเริ่มต้นสุ่มโดย <b>authorizeOnce</b> (ดูใน Execution log ของ Apps Script) — แนะนำให้เปลี่ยนทันที</div></div>' +
+      (MODE === 'gas' && adm ? '<div class="card">' + secHead('เปลี่ยนรหัสผู้ดูแล') + '<div class="row"><input type="password" id="npAdmin" placeholder="รหัสใหม่ (≥4 ตัว)" style="width:220px"/><button class="btn pri" onclick="setAdminPin()">บันทึก</button></div></div>' +
+        '<div class="card">' + secHead('ตั้งรหัสให้โรงเรียน', 'โรงเรียนใช้รหัสของตนกรอกผลการเรียน/นำเข้าข้อมูลของตนเองได้ (เก็บแบบแฮช)') + '<div class="row"><div class="grow">' + sel('pnS', idx().schools.map(s => [s.code, sName(s.code)]), '', 'void') + '</div><input type="password" id="pnP" placeholder="รหัสโรงเรียน (≥4 ตัว)" style="width:200px"/><button class="btn pri" onclick="setSchoolPin()">ตั้งรหัส</button></div></div>' :
+        '<div class="card"><div class="muted">' + (SIM ? 'โหมดจำลอง: ไม่มีการตั้งรหัส' : MODE !== 'gas' ? 'โหมดทดลอง (เปิดนอก Apps Script): ไม่มีระบบรหัสผ่านจริง' : 'เข้าสู่ระบบด้วยรหัสผู้ดูแลเพื่อตั้งรหัส') + '</div></div>') + '</div>';
+  }
+  if (t === 'sim') return h + '<div class="stack"><div class="card">' + secHead('โหมดจำลองข้อมูลเสมือนจริง', 'ใช้สาธิต/ทดลองหน้าจอและรายงาน โดยไม่แตะข้อมูลจริง') +
+    '<div class="row" style="gap:16px;align-items:center"><div class="grow"><b>' + (SIM ? 'กำลังเปิดใช้งาน' : 'ปิดอยู่') + '</b><div class="muted small" style="margin-top:6px">สร้างข้อมูลสมมติ 39 โรงเรียน 3 ปีการศึกษา (ม.3 และ ม.6) ทั้ง O-NET รายวิชา/มาตรฐาน ผลการเรียน และตัวอย่างการพัฒนา อยู่ในหน่วยความจำของแท็บนี้เท่านั้น — <b>ไม่บันทึกลงฐานข้อมูล</b> ปิดโหมดแล้วกลับเป็นข้อมูลจริงทันที เอกสาร export จะมีป้าย [ข้อมูลจำลอง]</div></div>' +
+    '<button class="btn ' + (SIM ? 'dng' : 'pri') + '" onclick="setSim(' + (!SIM) + ')">' + (SIM ? 'ปิดโหมดจำลอง' : '🧪 เปิดโหมดจำลอง') + '</button></div></div></div>';
+  return h + updHtml();
+};
+PAGES.after_set = function () {
+  const f = $('#logoIn'); if (f) f.addEventListener('change', () => { if (f.files[0]) uploadLogo(f.files[0]); f.value = ''; });
+  if (curTab('set', 'gen') === 'upd') updInit();
+};
+async function saveSettings(patch) { if (!(await needAuth())) return false; if (AUTH && AUTH.role !== 'admin' && !SIM) { toast('เฉพาะผู้ดูแล', 'er'); return false; } try { await commit([{ op: 'merge', c: 'settings', id: 'app', data: patch }]); return true; } catch (e) { toast(e.message, 'er'); return false; } }
+async function saveGen() {
+  const g = k => $('#st_' + k).value, n = k => +g(k), p = { title: g('title').trim(), short: g('short').trim(), org: g('org').trim(), total: n('total') || 39, band: n('band'), accHi: n('accHi'), accMid: n('accMid'), stdA: n('stdA'), stdB: n('stdB'), stdC: n('stdC') };
+  if (!p.title) { toast('กรอกชื่อระบบ', 'er'); return; }
+  if (await saveSettings(p)) { toast('บันทึกการตั้งค่าแล้ว', 'ok'); render(); }
+}
+async function saveLabels() { const lm = Object.assign({}, getSettings().labelMap || {}); $$('.lbIn').forEach(i => { const v = i.value.trim(); if (v) lm[i.dataset.k] = v; else delete lm[i.dataset.k]; }); if (!(await needAuth())) return; try { await commit([{ op: 'set', c: 'settings', id: 'app', data: Object.assign({}, col('settings').app || {}, { labelMap: lm }) }]); toast('บันทึกแล้ว', 'ok'); render(); } catch (e) { toast(e.message, 'er'); } }
+function resizeImage(file, max) {
+  return new Promise((res, rej) => {
+    const fr = new FileReader(); fr.onerror = rej;
+    fr.onload = () => {
+      if (/svg/.test(file.type)) return res({ dataUrl: fr.result, blob: file, type: file.type });
+      const im = new Image(); im.onerror = () => rej(new Error('อ่านรูปไม่ได้'));
+      im.onload = () => { const k = Math.min(1, max / Math.max(im.width, im.height)), c = document.createElement('canvas'); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); const png = file.type !== 'image/jpeg'; const d = c.toDataURL(png ? 'image/png' : 'image/jpeg', .9); res({ dataUrl: d, type: png ? 'image/png' : 'image/jpeg' }); };
+      im.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+async function uploadLogo(file) {
+  if (file.size > 5 * 1024 * 1024) { toast('ไฟล์ใหญ่เกิน 5MB', 'er'); return; }
+  if (!(await needAuth())) return;
+  try {
+    const r = await resizeImage(file, 512); let url = r.dataUrl;
+    if (MODE === 'gas' && !SIM) { const rr = await gasCall('apiUpload', authStr(), JSON.stringify({ filename: 'logo_' + Date.now() + (r.type === 'image/jpeg' ? '.jpg' : r.type === 'image/svg+xml' ? '.svg' : '.png'), mimeType: r.type, data: r.dataUrl.split(',')[1] || '', section: 'logo' })); url = rr.url; }
+    else if (url.length > 45000) { toast('โหมดทดลองเก็บโลโก้ได้เฉพาะรูปขนาดเล็ก — ใช้รูปที่เล็กลง', 'er'); return; }
+    if (await saveSettings({ logo: url })) { toast('อัปโหลดโลโก้แล้ว', 'ok'); render(); }
+  } catch (e) { toast(e.message, 'er'); }
+}
+async function removeLogo() { if (await saveSettings({ logo: '' })) { toast('ลบโลโก้แล้ว', 'ok'); render(); } }
+async function setAdminPin() { const v = $('#npAdmin').value; if (v.length < 4) { toast('รหัสอย่างน้อย 4 ตัว', 'er'); return; } try { await gasCall('apiSetPins', authStr(), JSON.stringify({ adminPin: v })); setAuth(Object.assign({}, AUTH, { pin: v })); toast('เปลี่ยนรหัสผู้ดูแลแล้ว', 'ok'); $('#npAdmin').value = ''; } catch (e) { toast(e.message, 'er'); } }
+async function setSchoolPin() { const c = $('#pnS').value, v = $('#pnP').value; if (!c || v.length < 4) { toast('เลือกโรงเรียนและกรอกรหัสอย่างน้อย 4 ตัว', 'er'); return; } try { await gasCall('apiSetPins', authStr(), JSON.stringify({ schoolCode: c, schoolPin: v })); toast('ตั้งรหัสให้ ' + sName(c) + ' แล้ว', 'ok'); $('#pnP').value = ''; } catch (e) { toast(e.message, 'er'); } }
+
+/* ---------- ศูนย์อัปเดต ---------- */
+const UPD_STEPS = [
+  { t: 'เลือกไฟล์ Code.gs', d: 'ในหน้าแก้โค้ด คลิกไฟล์ Code.gs ที่แถบซ้าย' },
+  { t: 'วางทับโค้ดเดิม', d: 'คลิกในช่องโค้ด กด Ctrl+A แล้ว Ctrl+V' },
+  { t: 'บันทึก', d: 'กดไอคอนบันทึก (Ctrl+S) — ทำซ้ำกับ index.html' },
+  { t: 'เมนู "การทำให้ใช้งานได้"', d: 'มุมขวาบน กด "การทำให้ใช้งานได้" › "จัดการการทำให้ใช้งานได้"' },
+  { t: 'แก้ไข (ไอคอนดินสอ)', d: 'กดดินสอที่ Web app เดิม แล้วเลือกเวอร์ชัน "เวอร์ชันใหม่"' },
+  { t: 'เผยแพร่', d: 'กด "การทำให้ใช้งานได้" — เสร็จสิ้น ลิงก์เดิมใช้ได้ต่อ' }];
+function updHtml() {
+  const I = UPD.info;
+  const vcard = '<div class="card">' + secHead('เวอร์ชันระบบ', 'เปรียบเทียบกับศูนย์อัปเดตบน GitHub Pages') + '<div class="grid3"><div><div class="muted small">ที่ใช้อยู่</div><div style="font:600 24px Kanit">v' + APP_VERSION + '</div></div><div><div class="muted small">ล่าสุดในศูนย์</div><div style="font:600 24px Kanit">' + (I ? 'v' + esc(I.latest) : '…') + '</div></div><div class="row" style="align-items:center">' + (I ? (I.newer ? bdg('มีเวอร์ชันใหม่', 'y') : bdg('เป็นรุ่นล่าสุด', 'g')) : '') + '<button class="btn sm" onclick="updLoad(true)">🔄 ตรวจใหม่</button></div></div>' +
+    (I && I.warn ? '<div class="note" style="margin-top:10px">' + esc(I.warn) + '</div>' : '') + (I && I.notes && I.notes.length ? '<div style="margin-top:12px"><b>มีอะไรใหม่</b><ul class="small" style="margin:6px 0 0 18px">' + I.notes.map(n => '<li>' + esc(n) + '</li>').join('') + '</ul></div>' : '') + '</div>';
+  const files = (I && I.files && I.files.length ? I.files : [{ path: 'Code.gs.txt', label: 'Code.gs' }, { path: 'index.html.txt', label: 'index.html' }]);
+  const box = '<div class="card upbox"><div class="row" style="align-items:center;gap:14px"><div class="grow"><b>ขั้น 1–2: เปิดหน้าแก้โค้ด แล้ววางโค้ดใหม่</b><div class="muted small" style="margin-top:4px">เจ้าของชีตเป็นผู้ deploy เสมอ (เพื่อให้ไฟล์/สิทธิ์ Drive อยู่ที่บัญชีเดียวกัน)</div></div><button class="btn pri glow" onclick="updOpenEditor()">↗ เปิดหน้าแก้โค้ด</button></div>' +
+    '<div class="grid2" style="margin-top:12px">' + files.map(f => '<div class="card flat"><div class="row" style="align-items:center"><div class="grow"><b>' + esc(f.label || f.path) + '</b><div class="muted small">' + esc(f.hint || 'คัดลอกทั้งไฟล์ไปวางทับ') + '</div></div><button class="btn sm pri" onclick="updCopy(\'' + esc(f.path) + '\',this)">คัดลอกโค้ด</button></div></div>').join('') + '</div></div>';
+  const mock = '<div class="card">' + secHead('ขั้น 3: วิธี Deploy (ภาพจำลอง)') + '<div class="upm" id="upm"><div class="upm-bar"><i></i><i></i><i></i><span>script.google.com</span></div><div class="upm-body"><div class="upm-side"><div data-t="f0">Code.gs</div><div data-t="f1">index.html</div></div><div class="upm-main"><div class="upm-code" data-t="code"></div><div class="upm-tool"><span data-t="save">💾</span><span data-t="dep">การทำให้ใช้งานได้ ▾</span></div><div class="upm-menu" data-t="menu"><div data-t="mng">จัดการการทำให้ใช้งานได้</div></div><div class="upm-dlg" data-t="dlg"><div>Web app <span data-t="pen">✏️</span></div><div class="upm-ver" data-t="ver">เวอร์ชัน: <b>เวอร์ชันใหม่</b></div><button class="upm-pub" data-t="pub">การทำให้ใช้งานได้</button><div class="upm-ok" data-t="ok">✓ อัปเดตเรียบร้อย</div></div></div><div class="upm-cur" id="upcur"></div></div></div>' +
+    '<div class="prog" style="margin:10px 0"><i id="upprog" style="width:0"></i></div><div class="row" style="align-items:center"><button class="btn sm" onclick="updGo(UPD.step-1)">◀</button><button class="btn sm" id="uppp" onclick="updToggle()">⏸</button><button class="btn sm" onclick="updGo(UPD.step+1)">▶</button><div class="grow small" id="upcap"></div></div>' +
+    '<div class="row" style="margin-top:8px;flex-wrap:wrap">' + UPD_STEPS.map((s, i) => '<button class="btn sm" onclick="updGo(' + i + ')">' + (i + 1) + '. ' + s.t + '</button>').join('') + '</div></div>';
+  return '<div class="stack">' + vcard + box + mock + '</div>';
+}
+async function updLoad(force) {
+  if (UPD.loading) return; UPD.loading = true;
+  try {
+    if (MODE === 'gas' && !SIM) { if (!(await needAuth())) { UPD.loading = false; return; } UPD.info = await gasCall('apiUpdateInfo', authStr()); }
+    else { try { const r = await fetch(UPD_CENTER + 'version.json?t=' + Date.now()); const L = await r.json(); UPD.info = { latest: L.version, notes: L.notes || [], files: L.files || [], newer: L.version !== APP_VERSION, editor: 'https://script.google.com/home', center: UPD_CENTER }; } catch (e) { UPD.info = { latest: APP_VERSION, notes: [], newer: false, warn: 'โหมดทดลอง: อ่านศูนย์อัปเดตไม่ได้ (' + e.message + ')', editor: 'https://script.google.com/home' }; } }
+  } catch (e) { UPD.info = { latest: APP_VERSION, newer: false, notes: [], warn: e.message, editor: 'https://script.google.com/home' }; }
+  UPD.loading = false; if (S.page === 'set' && curTab('set', 'gen') === 'upd') { $('#view').innerHTML = PAGES.set(); updInit(true); }
+}
+function updInit(re) { if (!UPD.info && !re) updLoad(); updGo(UPD.step || 0); clearInterval(UPD.timer); UPD.timer = setInterval(() => { if (!$('#upm')) { clearInterval(UPD.timer); return; } if (!UPD.paused) { UPD._t = (UPD._t || 0) + 100; $('#upprog').style.width = Math.min(100, UPD._t / 42) + '%'; if (UPD._t >= 4200) updGo((UPD.step + 1) % UPD_STEPS.length); } }, 100); }
+function updToggle() { UPD.paused = !UPD.paused; $('#uppp').textContent = UPD.paused ? '▶' : '⏸'; }
+function updGo(i) {
+  const m = $('#upm'); if (!m) return; i = (i + UPD_STEPS.length) % UPD_STEPS.length; UPD.step = i; UPD._t = 0; $('#upprog').style.width = '0%';
+  m.dataset.s = i; const hl = ['f0', 'code', 'save', 'dep', 'pen', 'pub'][i];
+  $$('[data-t]', m).forEach(e => { e.classList.toggle('hl', e.dataset.t === hl); });
+  m.querySelector('[data-t=menu]').style.display = i >= 3 ? 'block' : 'none'; m.querySelector('[data-t=dlg]').style.display = i >= 4 ? 'block' : 'none';
+  m.querySelector('[data-t=ver]').style.display = i >= 4 ? 'block' : 'none'; m.querySelector('[data-t=ok]').style.display = i === 5 ? 'block' : 'none';
+  m.querySelector('[data-t=code]').textContent = i >= 1 ? '// โค้ดใหม่ถูกวางทับแล้ว\nconst APP_VERSION = "' + ((UPD.info && UPD.info.latest) || APP_VERSION) + '";\n…' : '// โค้ดเดิม\nconst APP_VERSION = "' + APP_VERSION + '";\n…';
+  $('#upcap').innerHTML = '<b>' + (i + 1) + '/6 ' + UPD_STEPS[i].t + '</b> — ' + UPD_STEPS[i].d;
+  const tgt = m.querySelector('[data-t=' + hl + ']'), cur = $('#upcur'); if (tgt && cur) { const r = tgt.getBoundingClientRect(), b = m.getBoundingClientRect(); cur.style.transform = 'translate(' + (r.left - b.left + r.width * .6) + 'px,' + (r.top - b.top + r.height * .6) + 'px)'; }
+}
+function updOpenEditor() { const u = (UPD.info && UPD.info.editor) || 'https://script.google.com/home'; window.open(u, '_blank'); if (!UPD.info) toast('ถ้าเปิดไม่ถูกโปรเจกต์ ให้เข้าจาก ส่วนขยาย › Apps Script ในชีต', 'ok'); }
+async function updCopy(path, btn) {
+  const old = btn.textContent; btn.disabled = true; btn.textContent = 'กำลังดึง…';
+  try { const r = await fetch(UPD_CENTER + path + '?t=' + Date.now()); if (!r.ok) throw new Error('HTTP ' + r.status); const tx = await r.text();
+    try { await navigator.clipboard.writeText(tx); } catch (e) { const ta = document.createElement('textarea'); ta.value = tx; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+    btn.textContent = '✓ คัดลอกแล้ว'; toast('คัดลอก ' + path + ' แล้ว (' + tx.length.toLocaleString() + ' ตัวอักษร)', 'ok'); }
+  catch (e) { toast('ดึงโค้ดไม่ได้: ' + e.message, 'er'); btn.textContent = old; }
+  setTimeout(() => { btn.textContent = old; btn.disabled = false; }, 2200);
+}
+
+/* ---------- Boot ---------- */
+(function boot() {
+  try { if (sessionStorage.getItem('app_sim') === '1') { REAL_DATA = Store.data; Store.data = makeSim(); SIM = true; } } catch (e) {}
+  const start = () => { try { render(); } catch (e) { console.error(e); const b = document.createElement('div'); b.className = 'note bad'; b.textContent = 'เริ่มระบบไม่สำเร็จ: ' + e.message; document.body.appendChild(b); } };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+})();
+
+</script>
+<div id="appEndOfFile" hidden></div>
+</body>
+</html>

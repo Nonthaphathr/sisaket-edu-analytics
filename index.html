@@ -1,0 +1,30 @@
+<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>ศูนย์อัปเดต — ระบบวิเคราะห์ผลสัมฤทธิ์และ O-NET อบจ.ศรีสะเกษ</title>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600&family=Sarabun:wght@400;600&display=swap" rel="stylesheet"/>
+<style>
+:root{--g:linear-gradient(135deg,#fb7185,#dc2626 60%,#9f1239)}*{box-sizing:border-box}
+body{margin:0;font-family:Sarabun,sans-serif;background:linear-gradient(180deg,#fff,#fff5f5);color:#1f2937}
+.w{max-width:860px;margin:0 auto;padding:28px 16px}h1,h2{font-family:Kanit}
+.hero{background:var(--g);color:#fff;border-radius:20px;padding:26px;box-shadow:0 14px 40px rgba(220,38,38,.25)}.hero h1{margin:0 0 6px;font-size:24px}
+.c{background:#fff;border:1px solid #f3dede;border-radius:16px;padding:18px;margin-top:16px;box-shadow:0 4px 18px rgba(0,0,0,.04)}
+.b{display:inline-block;border:0;background:var(--g);color:#fff;border-radius:10px;padding:10px 18px;font:600 15px Sarabun;cursor:pointer;text-decoration:none}
+.b.o{background:#fff;color:#dc2626;border:1px solid #fca5a5}input{width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;font:inherit}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.m{color:#6b7280;font-size:13.5px}ol li{margin:6px 0}
+footer{text-align:center;color:#6b7280;font-size:13px;margin-top:26px}
+</style></head><body><div class="w">
+<div class="hero"><h1>ศูนย์อัปเดตระบบ</h1><div>ระบบสารสนเทศวิเคราะห์ผลสัมฤทธิ์ทางการเรียนและผลการทดสอบระดับชาติ — อบจ.ศรีสะเกษ</div><div id="ver" style="margin-top:10px;font:600 18px Kanit">กำลังตรวจเวอร์ชัน…</div></div>
+<div class="c" id="mine"><b>โปรเจกต์ของฉัน</b><div class="m" id="mineM">วางลิงก์หน้าแก้โค้ด (…/projects/รหัส/edit) ครั้งเดียว ระบบจะจำไว้ในเบราว์เซอร์นี้</div>
+<div class="row" style="margin-top:10px"><a class="b" id="edit" href="#" target="_blank" style="display:none">↗ เปิดหน้าแก้โค้ดของฉัน</a><input id="lnk" placeholder="https://script.google.com/home/projects/…/edit"/><button class="b o" onclick="saveLink()">จำลิงก์</button></div></div>
+<div class="c"><b>มีอะไรใหม่</b><ul id="notes"></ul></div>
+<div class="c"><b>ไฟล์สำหรับคัดลอก</b><div class="row" id="files" style="margin-top:10px"></div></div>
+<div class="c"><b>ขั้นตอนอัปเดต</b><ol><li>กด "เปิดหน้าแก้โค้ดของฉัน"</li><li>คัดลอกโค้ดแต่ละไฟล์จากปุ่มด้านบน → คลิกไฟล์ใน Apps Script → Ctrl+A → วางทับ → บันทึก</li><li>การทำให้ใช้งานได้ › จัดการ › ✏️ › เลือก "เวอร์ชันใหม่" › เผยแพร่ (เจ้าของชีตเป็นคน deploy)</li></ol></div>
+<footer>ออกแบบระบบโดย ดร.ปิยะพันธ์ พิชญ์ประเสริฐ • พัฒนาระบบโดย นนทพัทธ์ หิรัญเรือง</footer></div>
+<script>
+const $=s=>document.querySelector(s),ID=/^[A-Za-z0-9_-]{20,}$/;
+function st(id){try{if(id)localStorage.setItem('pid',id);return localStorage.getItem('pid')||''}catch(e){return id||''}}
+function show(id){if(!id)return;$('#edit').href='https://script.google.com/home/projects/'+id+'/edit';$('#edit').style.display='inline-block';$('#mineM').textContent='พร้อมแล้ว — กดปุ่มเพื่อเปิดโปรเจกต์ของคุณ'}
+function saveLink(){const m=$('#lnk').value.match(/projects\/([A-Za-z0-9_-]{20,})/);if(!m){alert('ลิงก์ไม่ถูกต้อง');return}st(m[1]);show(m[1])}
+const q=new URLSearchParams(location.search).get('p');if(q&&ID.test(q)){st(q);history.replaceState(null,'',location.pathname)}show(st());
+fetch('version.json?t='+Date.now()).then(r=>r.json()).then(v=>{$('#ver').textContent='เวอร์ชันล่าสุด v'+v.version+' • '+v.date;$('#notes').innerHTML=v.notes.map(n=>'<li>'+n.replace(/</g,'&lt;')+'</li>').join('');
+$('#files').innerHTML='';v.files.forEach(f=>{const b=document.createElement('button');b.className='b';b.textContent='คัดลอก '+f.label;b.onclick=async()=>{const t=await (await fetch(f.path+'?t='+Date.now())).text();try{await navigator.clipboard.writeText(t)}catch(e){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();document.execCommand('copy');a.remove()}b.textContent='✓ คัดลอกแล้ว'};$('#files').appendChild(b)})}).catch(e=>{$('#ver').textContent='อ่านเวอร์ชันไม่ได้'});
+</script></body></html>
