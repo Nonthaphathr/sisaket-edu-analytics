@@ -6,7 +6,7 @@
  * ออกแบบระบบโดย ดร.ปิยะพันธ์ พิชญ์ประเสริฐ
  * พัฒนาระบบโดย นนทพัทธ์ หิรัญเรือง
  */
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 const APP_NAME = 'Sisaket PAO Education Analytics System';
 const CREDIT_DESIGN = 'ออกแบบระบบโดย ดร.ปิยะพันธ์ พิชญ์ประเสริฐ';
 const CREDIT_DEV = 'พัฒนาระบบโดย นนทพัทธ์ หิรัญเรือง';
@@ -25,6 +25,7 @@ function doGet(e) {
     data: readAll_(),
     url: ScriptApp.getService().getUrl(),
     version: APP_VERSION,
+    params: (e && e.parameter) || {},
     pinReady: !!PropertiesService.getScriptProperties().getProperty('ADMIN_PIN')
   }).replace(/</g, '\\u003c');
   return t.evaluate()

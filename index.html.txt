@@ -40,9 +40,10 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
 .brand b{display:block;font-family:Kanit;font-size:15px;line-height:1.25}
 .brand small{color:var(--ink2);font-size:11.5px;line-height:1.3;display:block}
 .nv-h{font-size:11px;letter-spacing:.08em;color:#a8a1a1;font-weight:700;margin:12px 8px 2px;text-transform:uppercase}
-.nv{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:11px;color:#3a3f48;text-decoration:none;cursor:pointer;border:0;background:none;text-align:left;width:100%;transition:transform .18s,background .18s,color .18s}
-.nv:hover{background:var(--bg2);transform:translateX(2px)}
-.nv:active{transform:scale(.97)}
+.nv{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:11px;color:#3a3f48;text-decoration:none;cursor:pointer;border:0;background:none;text-align:left;width:100%;transition:background .12s,color .12s,box-shadow .12s;-webkit-tap-highlight-color:transparent}
+.nv:hover{background:var(--bg2)}
+.nv:active{background:#fde2e4}
+.nv.on:hover,.nv.on:active{background:var(--grad)}
 .nv.on{background:var(--grad);color:#fff;box-shadow:0 8px 18px -8px rgba(220,38,38,.6)}
 .nv i{width:20px;text-align:center;font-style:normal;opacity:.9}
 #main{flex:1;min-width:0;display:flex;flex-direction:column}
@@ -232,6 +233,8 @@ table.t .c{text-align:center}
 .upm-ver{display:none;margin:10px 0;padding:8px;border:1px solid #eee;border-radius:8px}.upm-pub{border:0;background:#1a73e8;color:#fff;border-radius:7px;padding:7px 14px;font:inherit}.upm-ok{display:none;margin-top:10px;color:#15803d;font-weight:700}
 .upm [data-t]{transition:box-shadow .25s,background .25s}.upm .hl{box-shadow:0 0 0 3px #fb7185;background:#fff1f2!important;color:#9f1239}
 .upm-cur{position:absolute;left:0;top:0;width:18px;height:18px;border-radius:50% 50% 50% 0;background:#dc2626;opacity:.85;transform:translate(20px,20px);transition:transform .7s cubic-bezier(.2,.8,.2,1);pointer-events:none;z-index:9}
+
+body.formmode #sb,body.formmode .mnav,body.formmode #burger,body.formmode #scrim{display:none!important}body.formmode #app{display:block}body.formmode #view{padding-bottom:24px}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
 </head>
@@ -371,7 +374,7 @@ if(typeof module!=='undefined') module.exports=OnetParser;
 
 'use strict';
 /* ===================== CORE: utils / store / auth / UI / charts / export / motion ===================== */
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 const CREDIT_DESIGN = 'ออกแบบระบบโดย ดร.ปิยะพันธ์ พิชญ์ประเสริฐ';
 const CREDIT_DEV = 'พัฒนาระบบโดย นนทพัทธ์ หิรัญเรือง';
 const UPD_CENTER = ['https:', '', 'nonthaphathr.github.io', 'sisaket-edu-analytics', ''].join('/');
@@ -391,6 +394,7 @@ const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v == n
 const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
 
 /* ---------- store ---------- */
+let FORM = null; // โหมดลิงก์กรอกเกรดรายโรงเรียน {s,y,g:[index]|null}
 let SIM = false; // โหมดจำลองข้อมูล: ทำงานในหน่วยความจำ ไม่เขียนฐานข้อมูลจริง
 const MODE = (window.APP_BOOT && typeof google !== 'undefined' && google.script && google.script.run) ? 'gas' : 'demo';
 const Store = { data: (window.APP_BOOT && window.APP_BOOT.data) || {} };
@@ -465,8 +469,8 @@ function openLogin() {
     _mdResolve = res;
     const sch = Object.values(col('schools')).sort((a, b) => (a.name || '').localeCompare(b.name || '', 'th'));
     openModal('<h3>เข้าสู่ระบบเพื่อบันทึก/แก้ไขข้อมูล</h3>' +
-      '<div class="row"><div class="grow"><label class="f">สถานะ</label><select id="lgRole" onchange="$(\'#lgSchW\').style.display=this.value===\'school\'?\'block\':\'none\'"><option value="admin">ผู้ดูแล (ศึกษานิเทศก์ / กลุ่มงานนิเทศ)</option><option value="school">โรงเรียน</option></select></div></div>' +
-      '<div id="lgSchW" style="display:none;margin-top:10px"><label class="f">โรงเรียน</label><select id="lgSch" style="width:100%">' + sch.map(s => '<option value="' + esc(s.code) + '">' + esc(s.name) + '</option>').join('') + '</select></div>' +
+      '<div class="row"><div class="grow"><label class="f">สถานะ</label><select id="lgRole" onchange="$(\'#lgSchW\').style.display=this.value===\'school\'?\'block\':\'none\'">' + (FORM ? '' : '<option value="admin">ผู้ดูแล (ศึกษานิเทศก์ / กลุ่มงานนิเทศ)</option>') + '<option value="school">โรงเรียน</option></select></div></div>' +
+      '<div id="lgSchW" style="display:' + (FORM ? 'block' : 'none') + ';margin-top:10px"><label class="f">โรงเรียน</label><select id="lgSch" style="width:100%"' + (FORM ? ' disabled' : '') + '>' + sch.filter(s => !FORM || s.code === FORM.s).map(s => '<option value="' + esc(s.code) + '">' + esc(s.name) + '</option>').join('') + '</select></div>' +
       '<div style="margin-top:10px"><label class="f">PIN</label><input type="password" id="lgPin" style="width:100%" inputmode="numeric" autocomplete="off" onkeydown="if(event.key===\'Enter\')doLogin()"/></div>' +
       '<div id="lgErr" class="small neg" style="margin-top:8px"></div>' +
       '<div class="act"><button class="btn" onclick="closeModal(false)">ยกเลิก</button><button class="btn pri" id="lgGo" onclick="doLogin()">เข้าสู่ระบบ</button></div>');
@@ -505,7 +509,7 @@ function initMotion(root) {
 }
 // ripple เบา ๆ บนปุ่ม
 document.addEventListener('pointerdown', e => {
-  const b = e.target.closest('.btn,.nv,.tab'); if (!b || REDUCED) return;
+  const b = e.target.closest('.btn,.tab'); if (!b || REDUCED) return;
   const r = b.getBoundingClientRect(), s = Math.max(r.width, r.height), d = document.createElement('span');
   d.style.cssText = 'position:absolute;border-radius:50%;pointer-events:none;background:currentColor;opacity:.16;transform:scale(0);transition:transform .5s,opacity .6s;width:' + s + 'px;height:' + s + 'px;left:' + (e.clientX - r.left - s / 2) + 'px;top:' + (e.clientY - r.top - s / 2) + 'px';
   if (getComputedStyle(b).position === 'static') b.style.position = 'relative';
@@ -807,7 +811,7 @@ const NAV = [
   { h: 'จัดการระบบ' }, { k: 'data', i: '⬆️', t: 'นำเข้าข้อมูล', m: 'นำเข้า' }, { k: 'set', i: '⚙️', t: 'ตั้งค่า', m: 'ตั้งค่า' }];
 const FILT = { home: 'yl', subj: 'yl', heat: 'yl', sup: 'yl', acad: 'y', onet: 'yl', diag: 'yl' };
 const PAGES = {};
-const navTitle = k => (NAV.find(n => n.k === k) || {}).t || '';
+const navTitle = k => k === 'gform' ? 'บันทึกผลการเรียน' : (NAV.find(n => n.k === k) || {}).t || '';
 
 function toggleSb(f) { const sb = $('#sb'), on = f == null ? !sb.classList.contains('open') : f; sb.classList.toggle('open', on); $('#scrim').classList.toggle('on', on); }
 function go(p, tab) { S.page = p; if (tab) S.tab[p] = tab; toggleSb(false); render(); }
@@ -823,13 +827,18 @@ const curTab = (p, d) => S.tab[p] || d;
 
 function renderChrome() {
   const st = getSettings();
-  $('#sb').innerHTML = '<div class="brand"><img src="' + esc(logoSrc()) + '" alt="logo"/><div><b>' + esc(st.short) + '</b><small>' + esc(st.org) + '</small></div></div>' +
-    NAV.map(n => n.h ? '<div class="nv-h">' + n.h + '</div>' : '<button class="nv' + (S.page === n.k ? ' on' : '') + '" onclick="go(\'' + n.k + '\')"><i>' + n.i + '</i><span>' + n.t + '</span></button>').join('') +
-    '<div style="flex:1"></div><div class="small muted" style="padding:8px">เวอร์ชัน ' + APP_VERSION + ' • ' + (MODE === 'gas' ? 'เชื่อมต่อ Google Sheets' : 'โหมดทดลอง (ไม่เชื่อมฐานข้อมูล)') + '</div>';
+  const sig = [logoSrc(), st.short, st.org, MODE].join('|');
+  if (S._sbSig !== sig || !$('#sb .nv')) {
+    S._sbSig = sig;
+    $('#sb').innerHTML = '<div class="brand"><img src="' + esc(logoSrc()) + '" alt="logo"/><div><b>' + esc(st.short) + '</b><small>' + esc(st.org) + '</small></div></div>' +
+      NAV.map(n => n.h ? '<div class="nv-h">' + n.h + '</div>' : '<button class="nv" data-k="' + n.k + '" onclick="go(\'' + n.k + '\')"><i>' + n.i + '</i><span>' + n.t + '</span></button>').join('') +
+      '<div style="flex:1"></div><div class="small muted" style="padding:8px">เวอร์ชัน ' + APP_VERSION + ' • ' + (MODE === 'gas' ? 'เชื่อมต่อ Google Sheets' : 'โหมดทดลอง (ไม่เชื่อมฐานข้อมูล)') + '</div>';
+  }
+  $$('#sb .nv').forEach(b => b.classList.toggle('on', b.dataset.k === S.page));
   const f = FILT[S.page] || '';
   $('#top').innerHTML = '<button class="btn sm" id="burger" onclick="toggleSb()" aria-label="เมนู">☰</button><h2>' + esc(navTitle(S.page)) + '</h2>' +
     '<div class="sel noprint">' + (f.indexOf('y') >= 0 && idx().years.length ? sel('fy', yearOpts(), S.year || latestYear(), 'setY') : '') + (f.indexOf('l') >= 0 ? sel('fl', levelOpts(), S.level, 'setL') : '') + '</div>' +
-    '<div class="noprint" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' + exportMenu() + (AUTH ? '<span class="bdg b">' + (AUTH.role === 'admin' ? 'ผู้ดูแล' : 'โรงเรียน: ' + esc(sName(AUTH.sch))) + '</span><button class="btn sm" onclick="logout()">ออก</button>' : '<button class="btn sm pri" onclick="openLogin()">🔐 เข้าสู่ระบบ</button>') + '</div>';
+    '<div class="noprint" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' + (FORM ? '' : exportMenu()) + (AUTH ? '<span class="bdg b">' + (AUTH.role === 'admin' ? 'ผู้ดูแล' : 'โรงเรียน: ' + esc(sName(AUTH.sch))) + '</span><button class="btn sm" onclick="logout()">ออก</button>' : '<button class="btn sm pri" onclick="openLogin()">🔐 เข้าสู่ระบบ</button>') + '</div>';
   $('#foot').innerHTML = '<div>' + esc(getSettings().title) + ' • ' + esc(st.org) + '</div><div style="margin-top:4px"><b>' + esc(CREDIT_DESIGN) + '</b> &nbsp;•&nbsp; <b>' + esc(CREDIT_DEV) + '</b></div>';
   const sb = $('#simbar'); sb.classList.toggle('on', SIM);
   sb.innerHTML = SIM ? '<span>🧪 โหมดจำลองข้อมูล — ข้อมูลทั้งหมดเป็นข้อมูลสมมติเพื่อสาธิต ไม่ใช่ข้อมูลจริง และจะไม่ถูกบันทึกลงฐานข้อมูล</span><button class="btn sm" onclick="setSim(false)">ออกจากโหมดจำลอง</button>' : '';
@@ -1190,7 +1199,7 @@ function impResultTable() {
 }
 PAGES.data = function () {
   const t = curTab('data', 'pdf');
-  let h = tabsHtml('data', [['pdf', '📄 นำเข้า PDF จาก O-NET'], ['acad', '🎓 ผลสัมฤทธิ์ทางการเรียน'], ['sch', '🏫 ข้อมูลโรงเรียน'], ['mng', '🗂 จัดการข้อมูลที่นำเข้า']]);
+  let h = tabsHtml('data', [['pdf', '📄 นำเข้า PDF จาก O-NET'], ['acad', '🎓 ผลสัมฤทธิ์ทางการเรียน'], ['sch', '🏫 ข้อมูลโรงเรียน']].concat(isAdmin() ? [['line', '📨 ข้อความ LINE']] : []).concat([['mng', '🗂 จัดการข้อมูลที่นำเข้า']]));
   if (t === 'pdf') {
     const groups = groupResults();
     h += '<div class="stack"><div class="card">' + secHead('นำเข้ารายงาน O-NET ตามแบบฟอร์มของ สทศ. (PDF) ได้ทันที', 'ลากไฟล์มาวางได้หลายไฟล์พร้อมกัน — รองรับฉบับที่ 1, 2, 4, 5, 6 (ฉบับที่ 3 ใช้ดึงชื่อโรงเรียนที่ถูกต้อง) ทั้ง ม.3 และ ม.6 ระบบอ่านในเครื่องของคุณ ไม่ส่งไฟล์ PDF ออกไปที่ใด') +
@@ -1202,15 +1211,19 @@ PAGES.data = function () {
   }
   if (t === 'acad') return h + acadImportHtml();
   if (t === 'sch') return h + schoolsHtml();
+  if (t === 'line') return h + lineHtml();
   return h + manageHtml();
 };
 PAGES.after_data = function () {
-  const d = $('#drop'); if (!d) return; const inp = $('#pdfIn');
-  inp.addEventListener('change', () => { if (inp.files.length) handlePdfFiles(inp.files); inp.value = ''; });
-  ['dragenter', 'dragover'].forEach(ev => d.addEventListener(ev, e => { e.preventDefault(); d.classList.add('ov'); }));
-  ['dragleave', 'drop'].forEach(ev => d.addEventListener(ev, e => { e.preventDefault(); d.classList.remove('ov'); }));
-  d.addEventListener('drop', e => { if (e.dataTransfer.files.length) handlePdfFiles(e.dataTransfer.files); });
+  const d = $('#drop'), inp = $('#pdfIn');
+  if (d && inp) {
+    inp.addEventListener('change', () => { if (inp.files.length) handlePdfFiles(inp.files); inp.value = ''; });
+    ['dragenter', 'dragover'].forEach(ev => d.addEventListener(ev, e => { e.preventDefault(); d.classList.add('ov'); }));
+    ['dragleave', 'drop'].forEach(ev => d.addEventListener(ev, e => { e.preventDefault(); d.classList.remove('ov'); }));
+    d.addEventListener('drop', e => { if (e.dataTransfer.files.length) handlePdfFiles(e.dataTransfer.files); });
+  }
   const f = $('#acFile'); if (f) f.addEventListener('change', () => { if (f.files[0]) readAcadFile(f.files[0]); f.value = ''; });
+  const g = $('#scFile'); if (g) g.addEventListener('change', () => { if (g.files[0]) readSchoolFile(g.files[0]); g.value = ''; });
 };
 
 /* ---------- ผลสัมฤทธิ์: ฟอร์มออนไลน์ + Excel/CSV ---------- */
@@ -1220,50 +1233,65 @@ function acadImportHtml() {
   const yr = S.year || 2568;
   return '<div class="stack"><div class="card">' + secHead('บันทึกผลการเรียนผ่านแบบฟอร์มออนไลน์', 'กรอกจำนวนผู้เรียนในแต่ละระดับผลการเรียน (0–4) รายกลุ่มสาระ ระบบคำนวณค่าเฉลี่ย ร้อยละผ่านเกณฑ์ และระดับ 3 ขึ้นไปให้อัตโนมัติ') +
     (lst.length ? '<div class="row"><div class="grow"><label class="f">โรงเรียน</label>' + sel('acS', lst.map(s => [s.code, sName(s.code)]), sc, 'acLoad') + '</div><div><label class="f">ปีการศึกษา</label><input type="number" id="acY" value="' + yr + '" style="width:110px" onchange="acLoad($(\'#acS\').value)"/></div></div>' +
-      '<div class="tw" style="margin-top:12px"><table class="t"><thead><tr><th>กลุ่มสาระ</th>' + ACOLS.map(c => '<th class="n">ระดับ ' + c + '</th>').join('') + '<th class="n">รวม</th><th class="n">เฉลี่ย</th><th class="n">ผ่าน %</th><th class="n">3+ %</th></tr></thead><tbody>' +
-      GROUPS.map((g, gi) => '<tr data-g="' + gi + '"><td>' + esc(g.k) + '</td>' + ACOLS.map((c, ci) => '<td><input type="number" min="0" class="acin" data-g="' + gi + '" data-c="' + ci + '" style="width:62px" oninput="acCalc(' + gi + ')"/></td>').join('') + '<td class="n" id="acN' + gi + '">0</td><td class="n" id="acM' + gi + '">–</td><td class="n" id="acP' + gi + '">–</td><td class="n" id="acT' + gi + '">–</td></tr>').join('') + '</tbody></table></div>' +
+      acTableHtml(GROUPS.map((g, i) => i)) +
       '<div class="row" style="margin-top:12px;justify-content:flex-end"><button class="btn pri" onclick="acSave()">💾 บันทึกผลการเรียน</button></div>' : empty('ต้องเพิ่มข้อมูลโรงเรียนก่อน (แท็บ "ข้อมูลโรงเรียน")')) + '</div>' +
-    '<div class="card">' + secHead('นำเข้าจากไฟล์ Excel / CSV', 'หัวตารางที่รองรับ: รหัสโรงเรียน, ปีการศึกษา, กลุ่มสาระ และ (จำนวนผู้เรียนระดับ 0, 1, 1.5, 2, 2.5, 3, 3.5, 4) หรือ (จำนวนนักเรียน, คะแนนเฉลี่ย, ร้อยละผ่านเกณฑ์, ร้อยละระดับ 3 ขึ้นไป)') +
-    '<div class="row"><button class="btn" onclick="acTemplate()">⬇️ ดาวน์โหลดแม่แบบ CSV</button><label class="btn pri" style="cursor:pointer">📂 เลือกไฟล์ .xlsx / .csv<input type="file" id="acFile" accept=".xlsx,.xls,.csv" hidden/></label></div><div id="acPrev" style="margin-top:12px">' + (IMP.acadRows ? acPreviewHtml() : '') + '</div></div></div>';
+    '<div class="card">' + secHead('นำเข้าจากไฟล์ Excel / CSV', 'ดาวน์โหลดแม่แบบ .xlsx → กรอกจำนวนผู้เรียนแต่ละระดับ → อัปโหลดกลับ (หัวตาราง: รหัสโรงเรียน, ปีการศึกษา, กลุ่มสาระ และ (จำนวนผู้เรียนระดับ 0, 1, 1.5, 2, 2.5, 3, 3.5, 4) หรือ (จำนวนนักเรียน, คะแนนเฉลี่ย, ร้อยละผ่านเกณฑ์, ร้อยละระดับ 3 ขึ้นไป)') +
+    '<div class="row"><button class="btn" onclick="acTemplate()">⬇️ แม่แบบ .xlsx (ทุกโรงเรียน)</button><label class="btn pri" style="cursor:pointer">📂 เลือกไฟล์ .xlsx / .csv<input type="file" id="acFile" accept=".xlsx,.xls,.csv" hidden/></label></div><div id="acPrev" style="margin-top:12px">' + (IMP.acadRows ? acPreviewHtml() : '') + '</div></div></div>';
 }
 PAGES.after_data2 = null;
+function acTableHtml(gis) {
+  return '<div class="tw" style="margin-top:12px"><table class="t"><thead><tr><th>กลุ่มสาระ</th>' + ACOLS.map(c => '<th class="n">ระดับ ' + c + '</th>').join('') + '<th class="n">รวม</th><th class="n">เฉลี่ย</th><th class="n">ผ่าน %</th><th class="n">3+ %</th></tr></thead><tbody>' +
+    gis.map(gi => '<tr data-g="' + gi + '"><td>' + esc(GROUPS[gi].k) + '</td>' + ACOLS.map((c, ci) => '<td><input type="number" min="0" inputmode="numeric" class="acin" data-g="' + gi + '" data-c="' + ci + '" style="width:62px" oninput="acCalc(' + gi + ')"/></td>').join('') + '<td class="n" id="acN' + gi + '">0</td><td class="n" id="acM' + gi + '">–</td><td class="n" id="acP' + gi + '">–</td><td class="n" id="acT' + gi + '">–</td></tr>').join('') + '</tbody></table></div>';
+}
 function acLoad(code) {
   S.sch = code; const y = +($('#acY') || {}).value || S.year;
   GROUPS.forEach((g, gi) => { const r = col('acad')[code + '|' + y + '|' + g.k]; ACOLS.forEach((c, ci) => { const el = $('.acin[data-g="' + gi + '"][data-c="' + ci + '"]'); if (el) el.value = r && r.c ? r.c[ci] : ''; }); acCalc(gi); });
 }
 function acCalc(gi) {
+  if (!$('.acin[data-g="' + gi + '"][data-c="0"]')) return;
   const c = ACOLS.map((x, ci) => +($('.acin[data-g="' + gi + '"][data-c="' + ci + '"]').value) || 0), st = acadStat({ c });
   $('#acN' + gi).textContent = fmtI(st.n); $('#acM' + gi).textContent = st.n ? fmt(st.mean) : '–'; $('#acP' + gi).textContent = st.n ? fmt(st.pass, 1) : '–'; $('#acT' + gi).textContent = st.n ? fmt(st.p3, 1) : '–';
 }
 async function acSave() {
   if (!(await needAuth())) return; const code = $('#acS').value, y = +$('#acY').value; if (!code || !y) { toast('เลือกโรงเรียนและปีการศึกษา', 'er'); return; }
   if (AUTH && AUTH.role === 'school' && !SIM && AUTH.sch !== code) { toast('บันทึกได้เฉพาะโรงเรียนของท่าน', 'er'); return; }
-  const ops = []; GROUPS.forEach((g, gi) => { const c = ACOLS.map((x, ci) => +($('.acin[data-g="' + gi + '"][data-c="' + ci + '"]').value) || 0); if (sum(c) > 0) ops.push({ op: 'set', c: 'acad', id: code + '|' + y + '|' + g.k, data: { s: code, y, g: g.k, c } }); });
+  const ops = []; GROUPS.forEach((g, gi) => { if (!$('.acin[data-g="' + gi + '"][data-c="0"]')) return; const c = ACOLS.map((x, ci) => +($('.acin[data-g="' + gi + '"][data-c="' + ci + '"]').value) || 0); if (sum(c) > 0) ops.push({ op: 'set', c: 'acad', id: code + '|' + y + '|' + g.k, data: { s: code, y, g: g.k, c } }); });
   if (!ops.length) { toast('ยังไม่ได้กรอกข้อมูล', 'er'); return; }
-  try { await commit(ops); toast('บันทึกผลการเรียน ' + ops.length + ' กลุ่มสาระแล้ว', 'ok'); S.year = y; renderChrome(); } catch (e) { toast(e.message, 'er'); }
+  try { await commit(ops); toast(FORM ? 'ส่งข้อมูลเรียบร้อย ขอบคุณครับ/ค่ะ (' + ops.length + ' กลุ่มสาระ)' : 'บันทึกผลการเรียน ' + ops.length + ' กลุ่มสาระแล้ว', 'ok'); S.year = y; renderChrome(); } catch (e) { toast(e.message, 'er'); }
 }
 function csvParse(txt) {
   const rows = []; let r = [], f = '', q = false; txt = txt.replace(/^﻿/, '');
   for (let i = 0; i < txt.length; i++) { const ch = txt[i]; if (q) { if (ch === '"') { if (txt[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += ch; } else if (ch === '"') q = true; else if (ch === ',' || ch === '\t') { r.push(f); f = ''; } else if (ch === '\n') { r.push(f); rows.push(r); r = []; f = ''; } else if (ch !== '\r') f += ch; }
   if (f !== '' || r.length) { r.push(f); rows.push(r); } return rows.filter(x => x.some(c => String(c).trim() !== ''));
 }
-function acTemplate() {
-  const code = (idx().schools[0] || {}).code || '3033100109'; const head = ['รหัสโรงเรียน', 'ปีการศึกษา', 'กลุ่มสาระ'].concat(ACOLS.map(c => 'ระดับ ' + c));
-  const rows = [head].concat(GROUPS.map(g => [code, S.year || 2568, g.k].concat(ACOLS.map(() => ''))));
-  downloadBlob('แม่แบบผลการเรียน.csv', 'text/csv;charset=utf-8', '﻿' + rows.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\r\n'));
+async function acTemplate(code) {
+  const sc = code ? [col('schools')[code]].filter(Boolean) : idx().schools, gs = (FORM && FORM.g) ? FORM.g : GROUPS.map((g, i) => i), y = (FORM && FORM.y) || S.year || 2568;
+  const head = ['รหัสโรงเรียน', 'ชื่อโรงเรียน', 'ปีการศึกษา', 'กลุ่มสาระ'].concat(ACOLS.map(c => 'ระดับ ' + c)), rows = [head];
+  (sc.length ? sc : [{ code: '3033100109', name: 'โรงเรียนตัวอย่างวิทยา' }]).forEach(s => gs.forEach(i => rows.push([s.code, s.name, y, GROUPS[i].k].concat(ACOLS.map(() => '')))));
+  try {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', () => !!window.XLSX);
+    const ws = XLSX.utils.aoa_to_sheet(rows); ws['!cols'] = [{ wch: 14 }, { wch: 30 }, { wch: 12 }, { wch: 28 }].concat(ACOLS.map(() => ({ wch: 9 })));
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'ผลการเรียน');
+    downloadBlob('แม่แบบผลการเรียน' + (code ? '_' + code : '') + '.xlsx', 'application/octet-stream', XLSX.write(wb, { bookType: 'xlsx', type: 'array' }));
+  } catch (e) { downloadBlob('แม่แบบผลการเรียน.csv', 'text/csv;charset=utf-8', '\ufeff' + rows.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\r\n')); toast('โหลดไลบรารี Excel ไม่ได้ จึงให้ไฟล์ .csv แทน', 'er'); }
 }
 function matchGroup(s) { s = String(s).replace(/\s+/g, ''); if (/ต่างประเทศ|อังกฤษ/.test(s)) return 'ภาษาต่างประเทศ'; if (/ไทย/.test(s)) return 'ภาษาไทย'; if (/คณิต/.test(s)) return 'คณิตศาสตร์'; if (/วิทย/.test(s)) return 'วิทยาศาสตร์และเทคโนโลยี'; if (/สังคม/.test(s)) return 'สังคมศึกษา ศาสนาและวัฒนธรรม'; if (/สุข|พล/.test(s)) return 'สุขศึกษาและพลศึกษา'; if (/ศิลป/.test(s)) return 'ศิลปะ'; if (/การงาน|อาชีพ/.test(s)) return 'การงานอาชีพ'; return null; }
+async function readSheetRows(file) {
+  if (/\.csv$/i.test(file.name)) return csvParse(await file.text());
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', () => !!window.XLSX);
+  const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+  return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false, defval: '' }).filter(r => r.some(c => String(c).trim() !== ''));
+}
 async function readAcadFile(file) {
   try {
-    let rows;
-    if (/\.csv$/i.test(file.name)) rows = csvParse(await file.text());
-    else { await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', () => !!window.XLSX); const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' }); rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false, defval: '' }); }
+    const rows = await readSheetRows(file);
     const hd = rows[0].map(x => String(x).replace(/\s+/g, '')), ix = {}, cc = {};
     hd.forEach((h, i) => { if (/รหัส/.test(h)) ix.code = i; else if (/ปี/.test(h)) ix.year = i; else if (/สาระ/.test(h)) ix.g = i; else if (/จำนวน(นักเรียน|ผู้เรียน)$/.test(h)) ix.n = i; else if (/เฉลี่ย/.test(h)) ix.mean = i; else if (/ผ่าน/.test(h)) ix.pass = i; else if (/(3ขึ้นไป|ระดับ3\+|3\+)/.test(h)) ix.p3 = i; else { const m = h.match(/^(?:ระดับ|ผลการเรียน|เกรด)?(0|1|1\.5|2|2\.5|3|3\.5|4)$/); if (m) cc[m[1]] = i; } });
     const out = [], bad = [];
     rows.slice(1).forEach((r, ri) => {
       const code = String(r[ix.code] || '').trim(), y = parseInt(r[ix.year]), g = matchGroup(r[ix.g]);
       if (!code || !y || !g) { bad.push('แถว ' + (ri + 2) + ': ข้อมูลไม่ครบ (รหัส/ปี/กลุ่มสาระ)'); return; }
+      if (FORM && code !== FORM.s) { bad.push('แถว ' + (ri + 2) + ': ไม่ใช่ข้อมูลของโรงเรียนนี้ (' + code + ')'); return; }
       if (!col('schools')[code]) { bad.push('แถว ' + (ri + 2) + ': ไม่พบรหัสโรงเรียน ' + code + ' ในระบบ'); return; }
       const rec = { s: code, y, g };
       if (Object.keys(cc).length >= 6) { rec.c = ACOLS.map(k => cc[k] != null ? (+String(r[cc[k]]).replace(/,/g, '') || 0) : 0); if (!sum(rec.c)) { bad.push('แถว ' + (ri + 2) + ': จำนวนผู้เรียนเป็นศูนย์'); return; } }
@@ -1288,6 +1316,7 @@ async function acImportSave() {
 function schoolsHtml() {
   const L = idx().schools, canEdit = isAdmin();
   return '<div class="stack"><div class="card">' + secHead('ข้อมูลพื้นฐานโรงเรียน (' + L.length + ' แห่ง)', 'รหัสโรงเรียน ชื่อ ขนาด จำนวนนักเรียน/ครู และระดับชั้นที่เปิดสอน', canEdit ? '<div class="row noprint"><button class="btn pri" onclick="editSchool()">➕ เพิ่มโรงเรียน</button><button class="btn" onclick="bulkSchools()">📋 วางรายชื่อหลายโรงเรียน</button></div>' : '') +
+    (canEdit ? '<div class="note info small noprint" style="margin:10px 0"><b>นำเข้าจากไฟล์ Excel (.xlsx) / CSV</b> — หัวตาราง: รหัสโรงเรียน, ชื่อโรงเรียน, ขนาด, ที่ตั้ง, จำนวนนักเรียน, จำนวนครู, ระดับชั้น (มีเฉพาะรหัสและชื่อก็ได้)<div class="row" style="margin-top:8px"><button class="btn sm" onclick="schTemplate()">⬇️ แม่แบบ .xlsx</button><label class="btn sm pri" style="cursor:pointer">📂 เลือกไฟล์ .xlsx / .csv<input type="file" id="scFile" accept=".xlsx,.xls,.csv" hidden/></label></div><div id="scPrev">' + (IMP.schRows ? schPreviewHtml() : '') + '</div></div>' : '') +
     tbl(['รหัส', 'ชื่อโรงเรียน', 'ขนาด', 'ที่ตั้ง', { h: 'นักเรียน', c: 'n' }, { h: 'ครู', c: 'n' }, 'ระดับชั้น', ''], L.map(s => [esc(s.code), esc(fixLabel(s.name)) + (s.nameCheck ? ' ' + bdg('ตรวจชื่อ', 'y') : ''), esc(s.size || '–'), esc(s.loc || '–'), fmtI(s.students), fmtI(s.teachers), esc(s.levels || '–'), (canEdit || (AUTH && AUTH.sch === s.code)) ? '<button class="btn sm noprint" onclick="editSchool(\'' + s.code + '\')">แก้ไข</button>' : ''])) + '</div></div>';
 }
 function editSchool(code) {
@@ -1322,6 +1351,92 @@ async function delOnet() {
   const ids = [...arguments]; if (!(await ask('ลบข้อมูล O-NET ชุดนี้ (' + ids.length + ' รายการวิชา)? ย้อนกลับไม่ได้', { title: 'ยืนยันการลบ', ok: 'ลบ' }))) return;
   try { await commit(ids.map(id => ({ op: 'delete', c: 'onet', id }))); toast('ลบแล้ว', 'ok'); render(); } catch (e) { toast(e.message, 'er'); }
 }
+
+/* ---------- นำเข้ารายชื่อโรงเรียนจาก .xlsx / .csv ---------- */
+async function schTemplate() {
+  try {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', () => !!window.XLSX);
+    const ws = XLSX.utils.aoa_to_sheet([['รหัสโรงเรียน', 'ชื่อโรงเรียน', 'ขนาด', 'ที่ตั้ง', 'จำนวนนักเรียน', 'จำนวนครู', 'ระดับชั้น'], ['3033100109', 'โรงเรียนตัวอย่างวิทยา', 'เล็ก', 'นอกเมือง', 210, 14, 'ม.1–ม.6']]);
+    ws['!cols'] = [{ wch: 14 }, { wch: 30 }, { wch: 10 }, { wch: 12 }, { wch: 14 }, { wch: 10 }, { wch: 12 }];
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'โรงเรียน');
+    downloadBlob('แม่แบบรายชื่อโรงเรียน.xlsx', 'application/octet-stream', XLSX.write(wb, { bookType: 'xlsx', type: 'array' }));
+  } catch (e) { toast(e.message, 'er'); }
+}
+async function readSchoolFile(file) {
+  try {
+    const rows = await readSheetRows(file); if (!rows.length) throw new Error('ไฟล์ว่าง');
+    const hd = rows[0].map(x => String(x).replace(/\s+/g, '')), ix = {};
+    hd.forEach((h, i) => { if (/รหัส/.test(h)) ix.code = i; else if (/ชื่อ/.test(h)) ix.name = i; else if (/ขนาด/.test(h)) ix.size = i; else if (/ที่ตั้ง|เขต/.test(h)) ix.loc = i; else if (/นักเรียน/.test(h)) ix.students = i; else if (/ครู/.test(h)) ix.teachers = i; else if (/ระดับ|ชั้น/.test(h)) ix.levels = i; });
+    if (ix.code == null || ix.name == null) throw new Error('ไม่พบหัวตาราง "รหัสโรงเรียน" และ "ชื่อโรงเรียน" ในแถวแรก');
+    const out = [], bad = [], seen = {};
+    rows.slice(1).forEach((r, ri) => {
+      const code = String(r[ix.code] || '').replace(/\D/g, ''), name = String(r[ix.name] || '').trim();
+      if (!/^\d{6,12}$/.test(code) || !name) { bad.push('แถว ' + (ri + 2) + ': รหัสต้องเป็นตัวเลข 6–12 หลัก และต้องมีชื่อโรงเรียน'); return; }
+      if (seen[code]) { bad.push('แถว ' + (ri + 2) + ': รหัส ' + code + ' ซ้ำกับแถวก่อนหน้า'); return; } seen[code] = 1;
+      const g = k => ix[k] != null ? String(r[ix[k]]).trim() : '', n = k => +g(k).replace(/,/g, '') || 0;
+      const rec = { code, name, nameCheck: false }; if (g('size')) rec.size = g('size'); if (g('loc')) rec.loc = g('loc'); if (ix.students != null) rec.students = n('students'); if (ix.teachers != null) rec.teachers = n('teachers'); if (g('levels')) rec.levels = g('levels');
+      out.push(rec);
+    });
+    IMP.schRows = { rows: out, bad }; $('#scPrev').innerHTML = schPreviewHtml();
+  } catch (e) { toast(e.message, 'er'); }
+}
+function schPreviewHtml() {
+  const A = IMP.schRows; if (!A) return ''; const nw = A.rows.filter(r => !col('schools')[r.code]).length;
+  return '<div class="note ' + (A.rows.length ? '' : 'bad') + '" style="margin-top:10px;background:#fff">อ่านได้ ' + A.rows.length + ' โรงเรียน (ใหม่ ' + nw + ' • อัปเดต ' + (A.rows.length - nw) + ')' + (A.bad.length ? ' • ข้าม ' + A.bad.length + ' แถว' : '') + '</div>' + (A.bad.length ? '<div class="small neg" style="margin:8px 0">' + A.bad.slice(0, 8).map(esc).join('<br/>') + '</div>' : '') +
+    (A.rows.length ? tbl(['รหัส', 'ชื่อโรงเรียน', 'ขนาด', 'ที่ตั้ง', { h: 'นักเรียน', c: 'n' }, { h: 'ครู', c: 'n' }, ''], A.rows.slice(0, 10).map(r => [esc(r.code), esc(r.name), esc(r.size || '–'), esc(r.loc || '–'), fmtI(r.students), fmtI(r.teachers), col('schools')[r.code] ? bdg('อัปเดต', 'y') : bdg('ใหม่', 'g')])) + (A.rows.length > 10 ? '<div class="muted small">…และอีก ' + (A.rows.length - 10) + ' แถว</div>' : '') + '<div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn" onclick="IMP.schRows=null;render()">ยกเลิก</button><button class="btn pri" onclick="schImportSave()">💾 บันทึก ' + A.rows.length + ' โรงเรียน</button></div>' : '');
+}
+async function schImportSave() {
+  if (!(await needAuth())) return; if (!isAdmin()) { toast('เฉพาะผู้ดูแล', 'er'); return; }
+  try { await commit(IMP.schRows.rows.map(r => ({ op: 'merge', c: 'schools', id: r.code, data: r }))); toast('นำเข้า ' + IMP.schRows.rows.length + ' โรงเรียนแล้ว', 'ok'); IMP.schRows = null; render(); } catch (e) { toast(e.message, 'er'); }
+}
+
+/* ---------- ข้อความ LINE + ลิงก์กรอกเกรดรายโรงเรียน/รายกลุ่มสาระ ---------- */
+const LINE_TPL = 'เรียน ผู้อำนวยการและผู้รับผิดชอบงานวัดผล {school}\nกลุ่มงานนิเทศ อบจ.ศรีสะเกษ ขอความอนุเคราะห์โรงเรียนบันทึกผลสัมฤทธิ์ทางการเรียน ปีการศึกษา {year}\n\n{links}\n\nวิธีกรอก: เปิดลิงก์ → กดเข้าสู่ระบบด้วย PIN ของโรงเรียน → กรอกจำนวนผู้เรียนในแต่ละระดับผลการเรียน (0–4) → กดบันทึก\nกำหนดส่ง: {deadline}\nขอบคุณครับ/ค่ะ';
+const LN = { y: null, mode: 'all', sel: null, base: '', dl: '', sch: '', tpl: null };
+function lnBase() { return LN.base || (window.APP_BOOT && APP_BOOT.url) || (location.href || '').split('?')[0]; }
+function lnLink(code, gis) { return lnBase() + '?f=grade&s=' + code + '&y=' + LN.y + (gis ? '&g=' + gis.join(',') : ''); }
+function lnText(sc) {
+  const gs = LN.sel.length ? LN.sel : GROUPS.map((g, i) => i); let links;
+  if (LN.mode === 'all') links = '🔗 ลิงก์กรอกผลการเรียน (ทุกกลุ่มสาระ)\n' + lnLink(sc.code);
+  else links = 'ลิงก์กรอกผลการเรียนแยกรายกลุ่มสาระ\n' + gs.map(i => '• ' + GROUPS[i].k + '\n  ' + lnLink(sc.code, [i])).join('\n');
+  return LN.tpl.replace(/\{school\}/g, sc.name).replace(/\{year\}/g, LN.y).replace(/\{links\}/g, links).replace(/\{deadline\}/g, LN.dl || '—');
+}
+function lineHtml() {
+  if (LN.y == null) { LN.y = S.year || 2568; LN.sel = GROUPS.map((g, i) => i); LN.tpl = getSettings().lineTpl || LINE_TPL; LN.dl = getSettings().lineDl || ''; }
+  const L = idx().schools.filter(s => !LN.sch || s.code === LN.sch);
+  if (!idx().schools.length) return '<div class="card">' + empty('ต้องเพิ่มโรงเรียนก่อน (แท็บ "ข้อมูลโรงเรียน")') + '</div>';
+  return '<div class="stack"><div class="card">' + secHead('สร้างข้อความส่ง LINE แจ้งโรงเรียน', 'แยกรายโรงเรียน — ลิงก์เปิดหน้ากรอกเกรดของโรงเรียนนั้นโดยตรง (ต้องใช้ PIN โรงเรียน; ตั้งที่ ตั้งค่า › รหัสผ่าน) และแยกลิงก์รายกลุ่มสาระได้') +
+    '<div class="grid2"><div><label class="f">ปีการศึกษา</label><input type="number" id="lnY" value="' + LN.y + '" style="width:100%" onchange="lnSet()"/></div><div><label class="f">กำหนดส่ง (ข้อความ)</label><input id="lnDl" value="' + esc(LN.dl) + '" placeholder="เช่น 30 พฤศจิกายน 2568" style="width:100%" onchange="lnSet()"/></div>' +
+    '<div><label class="f">รูปแบบลิงก์</label><select id="lnMode" style="width:100%" onchange="lnSet()"><option value="all"' + (LN.mode === 'all' ? ' selected' : '') + '>ลิงก์เดียว (ทุกกลุ่มสาระ)</option><option value="split"' + (LN.mode === 'split' ? ' selected' : '') + '>แยกลิงก์รายกลุ่มสาระ</option></select></div>' +
+    '<div><label class="f">โรงเรียน</label>' + sel('lnSch', [['', 'ทุกโรงเรียน (' + idx().schools.length + ')']].concat(idx().schools.map(s => [s.code, sName(s.code)])), LN.sch, 'lnPick') + '</div></div>' +
+    (LN.mode === 'split' ? '<div style="margin-top:10px"><label class="f">กลุ่มสาระที่ให้กรอก</label><div class="row" style="gap:6px">' + GROUPS.map((g, i) => '<label class="bdg ' + (LN.sel.includes(i) ? 'g' : 'n') + '" style="cursor:pointer"><input type="checkbox" ' + (LN.sel.includes(i) ? 'checked ' : '') + 'onchange="lnTog(' + i + ')" style="margin-right:4px"/>' + esc(g.k) + '</label>').join('') + '</div></div>' : '') +
+    '<div style="margin-top:10px"><label class="f">ที่อยู่เว็บแอป (ลิงก์ฐาน)</label><input id="lnBase" value="' + esc(lnBase()) + '" style="width:100%" onchange="lnSet()"/><div class="muted small" style="margin-top:4px">ปกติเป็นลิงก์ /exec ของ Web app ที่ deploy แล้ว</div></div>' +
+    '<div style="margin-top:10px"><label class="f">แม่แบบข้อความ — ใช้ {school} {year} {links} {deadline}</label><textarea id="lnTpl" style="min-height:150px;width:100%" onchange="lnSet()">' + esc(LN.tpl) + '</textarea></div>' +
+    '<div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn" onclick="lnReset()">คืนค่าแม่แบบ</button><button class="btn" onclick="lnSaveTpl()">💾 จำแม่แบบ</button><button class="btn" onclick="lnCopyAll()">📋 คัดลอกทั้งหมด</button><button class="btn pri" onclick="lnDownload()">⬇️ ดาวน์โหลด .txt</button></div></div>' +
+    L.map(sc => '<div class="card"><div class="row" style="justify-content:space-between;align-items:center"><b>' + esc(sName(sc.code)) + '</b><div class="row"><button class="btn sm" onclick="acTemplate(\'' + sc.code + '\')">⬇️ แม่แบบ .xlsx</button><button class="btn sm pri" onclick="lnCopy(\'' + sc.code + '\',this)">คัดลอกข้อความ</button></div></div><div class="small" style="white-space:pre-wrap;word-break:break-all;margin-top:8px;background:#fafafa;border-radius:10px;padding:10px;max-height:240px;overflow:auto">' + esc(lnText(sc)) + '</div></div>').join('') + '</div>';
+}
+function lnSet() { LN.y = +$('#lnY').value || LN.y; LN.dl = $('#lnDl').value; LN.mode = $('#lnMode').value; LN.base = $('#lnBase').value.trim(); LN.tpl = $('#lnTpl').value; render(); }
+function lnPick(v) { LN.sch = v; render(); }
+function lnTog(i) { LN.sel = LN.sel.includes(i) ? LN.sel.filter(x => x !== i) : LN.sel.concat(i).sort((a, b) => a - b); render(); }
+function lnReset() { LN.tpl = LINE_TPL; render(); }
+async function lnSaveTpl() { LN.tpl = $('#lnTpl').value; LN.dl = $('#lnDl').value; if (await saveSettings({ lineTpl: LN.tpl, lineDl: LN.dl })) toast('จำแม่แบบแล้ว', 'ok'); }
+async function clip_(tx) { try { await navigator.clipboard.writeText(tx); } catch (e) { const ta = document.createElement('textarea'); ta.value = tx; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); } }
+async function lnCopy(code, b) { await clip_(lnText(col('schools')[code])); const o = b.textContent; b.textContent = '✓ คัดลอกแล้ว'; setTimeout(() => b.textContent = o, 1800); }
+function lnAllText() { return idx().schools.filter(s => !LN.sch || s.code === LN.sch).map(sc => '=== ' + sc.name + ' ===\n' + lnText(sc)).join('\n\n'); }
+async function lnCopyAll() { await clip_(lnAllText()); toast('คัดลอกข้อความทั้งหมดแล้ว', 'ok'); }
+function lnDownload() { downloadBlob('ข้อความLINE_ผลการเรียน_' + LN.y + '.txt', 'text/plain;charset=utf-8', '\ufeff' + lnAllText()); }
+
+/* ---------- หน้ากรอกเกรด (เปิดจากลิงก์ ?f=grade&s=รหัส&y=ปี&g=ดัชนีกลุ่มสาระ) ---------- */
+PAGES.gform = function () {
+  const s = col('schools')[FORM.s]; if (!s) return '<div class="card">' + empty('ไม่พบโรงเรียนตามลิงก์นี้ — กรุณาติดต่อกลุ่มงานนิเทศ') + '</div>';
+  const gis = FORM.g && FORM.g.length ? FORM.g : GROUPS.map((g, i) => i);
+  return '<div class="stack"><div class="hero"><h2>' + esc(s.name) + '</h2><p>กรอกผลสัมฤทธิ์ทางการเรียน' + (FORM.g ? ' • ' + gis.map(i => esc(GROUPS[i].k)).join(', ') : ' (ทุกกลุ่มสาระ)') + '</p></div>' +
+    '<div class="card"><div class="row" style="align-items:flex-end"><div><label class="f">ปีการศึกษา</label><input type="number" id="acY" value="' + (FORM.y || S.year || '') + '" style="width:110px" onchange="acLoad(FORM.s)"/></div><div class="grow"></div>' + (AUTH ? '<span class="bdg g">เข้าสู่ระบบแล้ว</span>' : '<button class="btn pri glow" onclick="openLogin()">🔐 เข้าสู่ระบบด้วย PIN โรงเรียน</button>') + '</div>' +
+    '<input type="hidden" id="acS" value="' + esc(FORM.s) + '"/><div class="muted small" style="margin-top:8px">กรอกจำนวนผู้เรียนในแต่ละระดับผลการเรียน ระบบคำนวณค่าเฉลี่ยให้อัตโนมัติ แล้วกดบันทึก</div>' + acTableHtml(gis) +
+    '<div class="row" style="margin-top:12px;justify-content:flex-end"><button class="btn pri" onclick="acSave()">💾 บันทึกผลการเรียน</button></div></div>' +
+    '<div class="card"><b>หรือกรอกด้วยไฟล์ Excel (.xlsx)</b><div class="muted small" style="margin:4px 0 10px">ดาวน์โหลดแม่แบบของโรงเรียนนี้ กรอกแล้วอัปโหลดกลับ ระบบนำเข้าเฉพาะข้อมูลของ ' + esc(s.name) + '</div><div class="row"><button class="btn" onclick="acTemplate(FORM.s)">⬇️ แม่แบบ .xlsx</button><label class="btn pri" style="cursor:pointer">📂 อัปโหลดไฟล์ .xlsx / .csv<input type="file" id="acFile" accept=".xlsx,.xls,.csv" hidden/></label></div><div id="acPrev" style="margin-top:12px"></div></div></div>';
+};
+PAGES.after_gform = function () { acLoad(FORM.s); const f = $('#acFile'); if (f) f.addEventListener('change', () => { if (f.files[0]) readAcadFile(f.files[0]); f.value = ''; }); };
 
 /* ===================== ตั้งค่า + ศูนย์อัปเดต + Boot ===================== */
 const UPD = { info: null, loading: false, step: 0, timer: null, paused: false };
@@ -1449,6 +1564,7 @@ async function updCopy(path, btn) {
 
 /* ---------- Boot ---------- */
 (function boot() {
+  try { const P = (window.APP_BOOT && APP_BOOT.params) || {}; if (P.f === 'grade' && P.s) { const gl = String(P.g || '').split(',').map(x => parseInt(x)).filter(x => x >= 0 && x < GROUPS.length); FORM = { s: String(P.s).replace(/\D/g, ''), y: parseInt(P.y) || null, g: gl.length ? gl : null }; S.page = 'gform'; document.body.classList.add('formmode'); } } catch (e) { }
   try { if (sessionStorage.getItem('app_sim') === '1') { REAL_DATA = Store.data; Store.data = makeSim(); SIM = true; } } catch (e) {}
   const start = () => { try { render(); } catch (e) { console.error(e); const b = document.createElement('div'); b.className = 'note bad'; b.textContent = 'เริ่มระบบไม่สำเร็จ: ' + e.message; document.body.appendChild(b); } };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
