@@ -393,7 +393,7 @@ if(typeof module!=='undefined') module.exports=OnetParser;
 
 'use strict';
 /* ===================== CORE: utils / store / auth / UI / charts / export / motion ===================== */
-const APP_VERSION = '1.2.1';
+const APP_VERSION = '1.2.2';
 const CREDIT_DESIGN = 'ออกแบบระบบโดย ดร.ปิยะพันธ์ พิชญ์ประเสริฐ';
 const CREDIT_DEV = 'พัฒนาระบบโดย นนทพัทธ์ หิรัญเรือง';
 const UPD_CENTER = ['https:', '', 'nonthaphathr.github.io', 'sisaket-edu-analytics', ''].join('/');
@@ -1483,7 +1483,7 @@ async function schImportSave() {
 
 /* ---------- ข้อความ LINE + ลิงก์กรอกเกรดรายโรงเรียน/รายกลุ่มสาระ ---------- */
 const LINE_TPL = 'เรียน ผู้อำนวยการและผู้รับผิดชอบงานวัดผล {school}\nกลุ่มงานนิเทศ อบจ.ศรีสะเกษ ขอความอนุเคราะห์โรงเรียนบันทึกผลสัมฤทธิ์ทางการเรียน ปีการศึกษา {year}\n\n{links}\n\n🔑 PIN ของโรงเรียน: {pin} (โปรดเก็บเป็นความลับ)\n\nวิธีกรอก: เปิดลิงก์ → กดเข้าสู่ระบบ ใส่ PIN → กรอกจำนวนผู้เรียนในแต่ละระดับผลการเรียน (0–4) → กดบันทึก\nกำหนดส่ง: {deadline}\nขอบคุณครับ/ค่ะ';
-const LN = { y: null, mode: 'all', sel: null, base: '', dl: '', sch: '', tpl: null };
+const LN = { q: '', y: null, mode: 'all', sel: null, base: '', dl: '', sch: '', tpl: null };
 function lnBase() { return LN.base || (window.APP_BOOT && APP_BOOT.url) || (location.href || '').split('?')[0]; }
 function lnLink(code, gis) { return lnBase() + '?f=grade&s=' + code + '&y=' + LN.y + (gis ? '&g=' + gis.join(',') : ''); }
 function lnText(sc) {
@@ -1504,8 +1504,14 @@ function lineHtml() {
     '<div style="margin-top:10px"><label class="f">ที่อยู่เว็บแอป (ลิงก์ฐาน)</label><input id="lnBase" value="' + esc(lnBase()) + '" style="width:100%" onchange="lnSet()"/><div class="muted small" style="margin-top:4px">ปกติเป็นลิงก์ /exec ของ Web app ที่ deploy แล้ว</div></div>' +
     '<div style="margin-top:10px"><label class="f">แม่แบบข้อความ — ใช้ {school} {year} {links} {pin} {deadline}</label><textarea id="lnTpl" style="min-height:150px;width:100%" onchange="lnSet()">' + esc(LN.tpl) + '</textarea></div>' +
     '<div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn" onclick="lnReset()">คืนค่าแม่แบบ</button><button class="btn" onclick="lnSaveTpl()">💾 จำแม่แบบ</button><button class="btn" onclick="lnCopyAll()">📋 คัดลอกทั้งหมด</button><button class="btn pri" onclick="lnDownload()">⬇️ ดาวน์โหลด .txt</button></div></div>' +
-    '<div class="zone-h"><span class="zbadge cp">② คัดลอกส่งโรงเรียน</span><span class="muted small">กด "คัดลอกข้อความ" ของแต่ละโรงเรียน แล้วนำไปวางใน LINE (' + L.length + ' โรงเรียน)</span></div>' +
-    L.map(sc => '<div class="card cpc"><div class="row" style="justify-content:space-between;align-items:center"><div class="row" style="gap:8px"><b>' + esc(sName(sc.code)) + '</b>' + (PINMAP.map[sc.code] ? bdg('พร้อมส่ง', 'g') : bdg('ยังไม่มี PIN', 'y')) + '</div><div class="row"><button class="btn sm" onclick="window.open(lnLink(\'' + sc.code + '\'),\'_blank\')">🌐 เปิดเว็บกรอกข้อมูลโรงเรียน</button><button class="btn sm" onclick="acTemplate(\'' + sc.code + '\')">⬇️ แม่แบบ .xlsx</button><button class="btn sm pri" onclick="lnCopy(\'' + sc.code + '\',this)">📋 คัดลอกข้อความ</button></div></div><div class="cpl">ข้อความที่จะคัดลอก</div><div class="small" style="white-space:pre-wrap;word-break:break-all;background:#fff;border:1px dashed #fca5a5;border-radius:10px;padding:10px;max-height:240px;overflow:auto">' + esc(lnText(sc)) + '</div></div>').join('') + '</div>';
+    '<div class="zone-h"><span class="zbadge cp">② คัดลอกส่งโรงเรียน</span><span class="muted small">กด "คัดลอกข้อความ" ของแต่ละโรงเรียน แล้วนำไปวางใน LINE (<span id="lnCnt">' + L.filter(lnVis).length + '</span>/' + L.length + ' โรงเรียน)</span></div>' +
+    '<div class="card cpc" style="padding:10px 14px"><input id="lnQ" type="search" value="' + esc(LN.q) + '" placeholder="🔍 ค้นหาโรงเรียน (ชื่อหรือรหัส) ในส่วนคัดลอก" oninput="lnSearch(this.value)" style="width:100%"/><div id="lnNone" class="muted small" style="display:' + (L.some(lnVis) ? 'none' : 'block') + ';margin-top:8px">ไม่พบโรงเรียนที่ค้นหา</div></div>' +
+    L.map(sc => '<div class="card cpc lnc" data-q="' + esc((sc.code + ' ' + sName(sc.code)).toLowerCase()) + '"' + (lnVis(sc) ? '' : ' style="display:none"') + '><div class="row" style="justify-content:space-between;align-items:center"><div class="row" style="gap:8px"><b>' + esc(sName(sc.code)) + '</b>' + (PINMAP.map[sc.code] ? bdg('พร้อมส่ง', 'g') : bdg('ยังไม่มี PIN', 'y')) + '</div><div class="row"><button class="btn sm" onclick="window.open(lnLink(\'' + sc.code + '\'),\'_blank\')">🌐 เปิดเว็บกรอกข้อมูลโรงเรียน</button><button class="btn sm" onclick="acTemplate(\'' + sc.code + '\')">⬇️ แม่แบบ .xlsx</button><button class="btn sm pri" onclick="lnCopy(\'' + sc.code + '\',this)">📋 คัดลอกข้อความ</button></div></div><div class="cpl">ข้อความที่จะคัดลอก</div><div class="small" style="white-space:pre-wrap;word-break:break-all;background:#fff;border:1px dashed #fca5a5;border-radius:10px;padding:10px;max-height:240px;overflow:auto">' + esc(lnText(sc)) + '</div></div>').join('') + '</div>';
+}
+function lnVis(sc) { const q = (LN.q || '').trim().toLowerCase(); return !q || (sc.code + ' ' + sName(sc.code)).toLowerCase().includes(q); }
+function lnSearch(v) {
+  LN.q = v; let n = 0; $$('.lnc').forEach(c => { const ok = !v.trim() || c.dataset.q.includes(v.trim().toLowerCase()); c.style.display = ok ? '' : 'none'; if (ok) n++; });
+  const a = $('#lnCnt'); if (a) a.textContent = n; const z = $('#lnNone'); if (z) z.style.display = n ? 'none' : 'block';
 }
 function lnSet() { LN.y = +$('#lnY').value || LN.y; LN.dl = $('#lnDl').value; LN.mode = $('#lnMode').value; LN.base = $('#lnBase').value.trim(); LN.tpl = $('#lnTpl').value; render(); }
 function lnPick(v) { LN.sch = v; render(); }
@@ -1514,7 +1520,7 @@ function lnReset() { LN.tpl = LINE_TPL; render(); }
 async function lnSaveTpl() { LN.tpl = $('#lnTpl').value; LN.dl = $('#lnDl').value; if (await saveSettings({ lineTpl: LN.tpl, lineDl: LN.dl })) toast('จำแม่แบบแล้ว', 'ok'); }
 async function clip_(tx) { try { await navigator.clipboard.writeText(tx); } catch (e) { const ta = document.createElement('textarea'); ta.value = tx; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); } }
 async function lnCopy(code, b) { await clip_(lnText(col('schools')[code])); const o = b.textContent; b.textContent = '✓ คัดลอกแล้ว'; setTimeout(() => b.textContent = o, 1800); }
-function lnAllText() { return idx().schools.filter(s => !LN.sch || s.code === LN.sch).map(sc => '=== ' + sc.name + ' ===\n' + lnText(sc)).join('\n\n'); }
+function lnAllText() { return idx().schools.filter(s => (!LN.sch || s.code === LN.sch) && lnVis(s)).map(sc => '=== ' + sc.name + ' ===\n' + lnText(sc)).join('\n\n'); }
 async function lnCopyAll() { await clip_(lnAllText()); toast('คัดลอกข้อความทั้งหมดแล้ว', 'ok'); }
 function lnDownload() { downloadBlob('ข้อความLINE_ผลการเรียน_' + LN.y + '.txt', 'text/plain;charset=utf-8', '\ufeff' + lnAllText()); }
 
