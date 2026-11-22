@@ -6,7 +6,7 @@
  * ออกแบบระบบโดย ดร.ปิยะพันธ์ พิชญ์ประเสริฐ
  * พัฒนาระบบโดย นนทพัทธ์ หิรัญเรือง
  */
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.2.0';
 const APP_NAME = 'Sisaket PAO Education Analytics System';
 const CREDIT_DESIGN = 'ออกแบบระบบโดย ดร.ปิยะพันธ์ พิชญ์ประเสริฐ';
 const CREDIT_DEV = 'พัฒนาระบบโดย นนทพัทธ์ หิรัญเรือง';
@@ -162,12 +162,51 @@ function apiSetPins(authJson, payloadJson) {
   }
   if (p.schoolCode && p.schoolPin) {
     if (String(p.schoolPin).length < 4) throw new Error('PIN โรงเรียนต้องมีอย่างน้อย 4 ตัว');
-    const s = pinSh_(), last = s.getLastRow(), h = hash_(p.schoolPin);
-    let row = 0;
-    if (last > 0) s.getRange(1, 1, last, 1).getValues().forEach((r, i) => { if (String(r[0]) === String(p.schoolCode)) row = i + 1; });
-    if (!row) row = last + 1;
-    s.getRange(row, 1, 1, 2).setValues([[String(p.schoolCode), h]]);
+    savePin_(p.schoolCode, p.schoolPin);
   }
+  return JSON.stringify({ ok: true });
+}
+// เก็บแฮชใน sheet pins (ใช้ตรวจสิทธิ์) + PIN จริงใน ScriptProperties (ให้ผู้ดูแลดู/ส่ง LINE ได้เท่านั้น)
+function savePin_(code, pin) {
+  const s = pinSh_(), last = s.getLastRow(), h = hash_(pin);
+  let row = 0;
+  if (last > 0) s.getRange(1, 1, last, 1).getValues().forEach((r, i) => { if (String(r[0]) === String(code)) row = i + 1; });
+  if (!row) row = last + 1;
+  s.getRange(row, 1, 1, 2).setValues([[String(code), h]]);
+  PropertiesService.getScriptProperties().setProperty('PIN_' + code, String(pin));
+}
+function genPin_() { return String(100000 + (parseInt(Utilities.getUuid().replace(/-/g, '').slice(0, 8), 16) % 900000)); }
+// payload: {codes:[รหัสโรงเรียน], regen:bool} — สุ่ม PIN 6 หลัก (ข้ามโรงเรียนที่มี PIN แล้ว ถ้าไม่สั่ง regen)
+function apiGenPins(authJson, payloadJson) {
+  const a = auth_(authJson);
+  if (a.role !== 'admin') throw new Error('NOT_ALLOWED: เฉพาะผู้ดูแล');
+  const p = JSON.parse(payloadJson || '{}'), codes = p.codes || [], have = {}, out = {};
+  const s = pinSh_(), last = s.getLastRow();
+  if (last > 0) s.getRange(1, 1, last, 1).getValues().forEach(r => { if (r[0]) have[String(r[0])] = 1; });
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    codes.forEach(c => { c = String(c || ''); if (!c || (have[c] && !p.regen)) return; const pin = genPin_(); savePin_(c, pin); out[c] = pin; });
+  } finally { lock.releaseLock(); }
+  return JSON.stringify({ ok: true, pins: out });
+}
+function apiGetPins(authJson) {
+  const a = auth_(authJson);
+  if (a.role !== 'admin') throw new Error('NOT_ALLOWED: เฉพาะผู้ดูแล');
+  const props = PropertiesService.getScriptProperties().getProperties(), pins = {};
+  Object.keys(props).forEach(k => { if (k.indexOf('PIN_') === 0) pins[k.slice(4)] = props[k]; });
+  const s = pinSh_(), last = s.getLastRow();
+  const set = last > 0 ? s.getRange(1, 1, last, 1).getValues().map(r => String(r[0])).filter(x => x) : [];
+  return JSON.stringify({ ok: true, pins: pins, set: set });
+}
+// ย้าย PIN เมื่อโรงเรียนเปลี่ยนจากรหัสชั่วคราวเป็นรหัสจริง payload: {from,to}
+function apiRekeyPin(authJson, payloadJson) {
+  const a = auth_(authJson);
+  if (a.role !== 'admin') throw new Error('NOT_ALLOWED: เฉพาะผู้ดูแล');
+  const p = JSON.parse(payloadJson || '{}'); if (!p.from || !p.to) return JSON.stringify({ ok: true });
+  const s = pinSh_(), last = s.getLastRow(), props = PropertiesService.getScriptProperties();
+  if (last > 0) s.getRange(1, 1, last, 1).getValues().forEach((r, i) => { if (String(r[0]) === String(p.from)) s.getRange(i + 1, 1).setValue(String(p.to)); });
+  const v = props.getProperty('PIN_' + p.from);
+  if (v) { props.setProperty('PIN_' + p.to, v); props.deleteProperty('PIN_' + p.from); }
   return JSON.stringify({ ok: true });
 }
 function apiPinStatus(authJson) {
