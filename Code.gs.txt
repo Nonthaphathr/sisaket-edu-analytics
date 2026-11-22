@@ -6,7 +6,7 @@
  * ออกแบบระบบโดย ดร.ปิยะพันธ์ พิชญ์ประเสริฐ
  * พัฒนาระบบโดย นนทพัทธ์ หิรัญเรือง
  */
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.2.1';
 const APP_NAME = 'Sisaket PAO Education Analytics System';
 const CREDIT_DESIGN = 'ออกแบบระบบโดย ดร.ปิยะพันธ์ พิชญ์ประเสริฐ';
 const CREDIT_DEV = 'พัฒนาระบบโดย นนทพัทธ์ หิรัญเรือง';

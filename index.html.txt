@@ -247,6 +247,13 @@ body.formmode #sb,body.formmode .mnav,body.formmode #burger,body.formmode #scrim
 .seg button{border:0;background:none;padding:8px 14px;border-radius:9px;font:inherit;cursor:pointer;transition:background .2s,box-shadow .2s}
 .seg button.on{background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.12);color:#dc2626;font-weight:600}
 .pinc{font-family:monospace;letter-spacing:2px;font-weight:700}
+
+.zone-h{display:flex;align-items:center;gap:10px;margin:14px 0 -2px;flex-wrap:wrap}
+.zbadge{display:inline-block;padding:5px 14px;border-radius:999px;font-family:Kanit,sans-serif;font-weight:600;font-size:13.5px}
+.zbadge.cfg{background:#e0e7ff;color:#3730a3}.zbadge.cp{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;box-shadow:0 4px 12px rgba(220,38,38,.25)}
+.card.cfgc{border:1.5px dashed #a5b4fc;background:#f8faff}
+.card.cpc{border:1px solid #fecaca;border-left:5px solid #dc2626;background:linear-gradient(90deg,#fff5f5,#fff 40%)}
+.cpl{font-size:12px;color:#b91c1c;font-weight:600;margin:10px 0 4px}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
 </head>
@@ -386,7 +393,7 @@ if(typeof module!=='undefined') module.exports=OnetParser;
 
 'use strict';
 /* ===================== CORE: utils / store / auth / UI / charts / export / motion ===================== */
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.2.1';
 const CREDIT_DESIGN = 'ออกแบบระบบโดย ดร.ปิยะพันธ์ พิชญ์ประเสริฐ';
 const CREDIT_DEV = 'พัฒนาระบบโดย นนทพัทธ์ หิรัญเรือง';
 const UPD_CENTER = ['https:', '', 'nonthaphathr.github.io', 'sisaket-edu-analytics', ''].join('/');
@@ -420,9 +427,11 @@ function dmerge(a, b) {
   return o;
 }
 let AUTH = null; try { AUTH = JSON.parse(sessionStorage.getItem('app_auth') || 'null'); } catch (e) {}
+// โรงเรียนล็อกอินครั้งเดียว จำไว้ในเครื่องนี้ 12 ชั่วโมง (หรือจนกดออกจากระบบ)
+if (!AUTH) { try { const l = JSON.parse(localStorage.getItem('app_auth_l') || 'null'); if (l && l.a && l.a.role === 'school' && Date.now() - l.t < 43200000) AUTH = l.a; else localStorage.removeItem('app_auth_l'); } catch (e) {} }
 const authStr = () => JSON.stringify(AUTH ? { pin: AUTH.pin, sch: AUTH.sch || '' } : {});
 const isAdmin = () => SIM || (!!AUTH && AUTH.role === 'admin');
-function setAuth(a) { AUTH = a; try { if (a) sessionStorage.setItem('app_auth', JSON.stringify(a)); else sessionStorage.removeItem('app_auth'); } catch (e) {} }
+function setAuth(a) { AUTH = a; try { if (a) sessionStorage.setItem('app_auth', JSON.stringify(a)); else sessionStorage.removeItem('app_auth'); } catch (e) {} try { if (a && a.role === 'school' && !SIM) localStorage.setItem('app_auth_l', JSON.stringify({ a, t: Date.now() })); else localStorage.removeItem('app_auth_l'); } catch (e) {} }
 
 function gasCall(fn, ...args) {
   return new Promise((resolve, reject) => {
@@ -1112,7 +1121,7 @@ PAGES.imp = function () {
     '<div class="grid g4">' + STATUS.map(k => '<div class="card kpi"><div class="l">' + k + '</div><div class="v" data-count="' + cnt(k) + '">0</div><div class="s">รายการ</div></div>').join('') + '</div>' +
     '<div class="card">' + secHead('รายการติดตามการพัฒนา', '', (isAdmin() ? '<button class="btn pri noprint" onclick="editImp()">➕ เพิ่มรายการ</button>' : '')) +
     '<div class="row noprint" style="margin-bottom:10px"><div>' + sel('impf', [['', 'ทุกสถานะ']].concat(STATUS.map(s => [s, s])), f, 'setImpF') + '</div></div>' +
-    tbl(['โรงเรียน', 'ประเด็นที่ต้องพัฒนา', 'แนวทางการพัฒนา', 'วิธีติดตาม', { h: 'ครู/แผน', c: 'n' }, 'ผลลัพธ์', 'สถานะ', ''], rows.map(r => [r.s ? esc(sName(r.s)) : '<span class="muted">ทั้งสังกัด</span>', esc(r.issue), esc(r.plan) + ' ' + bdg(r.method, 'b'), esc(r.track || ''), (r.teachers || 0) + ' / ' + (r.plans || 0), '<span class="small">' + esc(r.outcome || '–') + '</span>', bdg(r.status, r.status === 'เสร็จสิ้น' ? 'g' : r.status === 'วางแผน' ? 'n' : 'y'), isAdmin() ? '<button class="btn sm noprint" onclick="editImp(\'' + r.id + '\')">แก้ไข</button>' : ''])) + '</div>' +
+    tbl(['โรงเรียน', 'ประเด็นที่ต้องพัฒนา', 'แนวทางการพัฒนา', 'วิธีติดตาม', { h: 'ครู/แผน', c: 'n' }, 'ผลลัพธ์', 'สถานะ', ''], rows.map(r => [r.s ? esc(sName(r.s)) : '<span class="muted">ทั้งสังกัด</span>', esc(r.issue), esc(r.plan) + ' ' + bdg(r.method === 'อื่น ๆ' && r.methodOther ? 'อื่น ๆ: ' + r.methodOther : r.method, 'b'), esc(r.track || ''), (r.teachers || 0) + ' / ' + (r.plans || 0), '<span class="small">' + esc(r.outcome || '–') + '</span>', bdg(r.status, r.status === 'เสร็จสิ้น' ? 'g' : r.status === 'วางแผน' ? 'n' : 'y'), isAdmin() ? '<button class="btn sm noprint" onclick="editImp(\'' + r.id + '\')">แก้ไข</button>' : ''])) + '</div>' +
     '<div class="card"><h3>ตัวอย่างการเชื่อมโยงผลวิเคราะห์ → แนวทางพัฒนา → วิธีติดตาม</h3><div class="sub">กด "ใช้เป็นต้นแบบ" เพื่อสร้างรายการใหม่</div>' +
     tbl(['ผลการวิเคราะห์', 'แนวทางการพัฒนา', 'วิธีติดตาม', ''], SUGG.map((s, i) => [esc(s[0]), esc(s[1]), esc(s[2]), isAdmin() ? '<button class="btn sm noprint" onclick="editImp(null,' + i + ')">ใช้เป็นต้นแบบ</button>' : ''])) + '</div></div>';
 };
@@ -1122,16 +1131,18 @@ async function editImp(id, sg) {
   const r = id ? Object.assign({}, col('improve')[id]) : (sg != null ? { issue: SUGG[sg][0], plan: SUGG[sg][1], track: SUGG[sg][2], method: SUGG[sg][3], status: 'วางแผน' } : { status: 'วางแผน', method: 'อบรม' });
   const F = (k, lab, type) => '<div class="grow"><label class="f">' + lab + '</label><input type="' + (type || 'text') + '" id="im_' + k + '" value="' + esc(r[k] == null ? '' : r[k]) + '" style="width:100%"/></div>';
   openModal('<h3>' + (id ? 'แก้ไข' : 'เพิ่ม') + 'รายการติดตามการพัฒนา</h3><div class="row"><div class="grow"><label class="f">โรงเรียน</label>' + sel('im_s', [['', 'ทั้งสังกัด']].concat(schoolOpts()), r.s || '', 'void') + '</div></div><div class="row" style="margin-top:10px">' + F('issue', 'ประเด็นที่ต้องพัฒนา (จากผลการวิเคราะห์)') + '</div><div class="row" style="margin-top:10px">' + F('plan', 'แนวทางการพัฒนา') + '</div>' +
-    '<div class="row" style="margin-top:10px"><div class="grow"><label class="f">รูปแบบ</label>' + sel('im_method', METHODS.map(m => [m, m]), r.method, 'void') + '</div><div class="grow"><label class="f">สถานะ</label>' + sel('im_status', STATUS.map(m => [m, m]), r.status, 'void') + '</div></div><div class="row" style="margin-top:10px">' + F('track', 'วิธีติดตาม') + '</div>' +
+    '<div class="row" style="margin-top:10px"><div class="grow"><label class="f">รูปแบบ</label>' + sel('im_method', METHODS.map(m => [m, m]), r.method, 'imMethod') + '</div><div class="grow"><label class="f">สถานะ</label>' + sel('im_status', STATUS.map(m => [m, m]), r.status, 'void') + '</div></div><div id="im_moW" style="margin-top:10px;display:' + (r.method === 'อื่น ๆ' ? 'block' : 'none') + '"><label class="f">ระบุรูปแบบอื่น ๆ</label><input id="im_mo" value="' + esc(r.methodOther || '') + '" placeholder="พิมพ์รูปแบบการพัฒนา เช่น ศึกษาดูงาน, ชุมชนการเรียนรู้ออนไลน์" style="width:100%"/></div><div class="row" style="margin-top:10px">' + F('track', 'วิธีติดตาม') + '</div>' +
     '<div class="row" style="margin-top:10px">' + F('teachers', 'ครูที่ได้รับการพัฒนา (คน)', 'number') + F('plans', 'แผนจัดการเรียนรู้ที่ปรับปรุง (ฉบับ)', 'number') + F('date', 'วันที่ (พ.ศ.)') + '</div><div style="margin-top:10px"><label class="f">ผลลัพธ์ที่เกิดขึ้น (ผลประเมินสมรรถนะ/ผลสัมฤทธิ์ที่เปลี่ยนแปลง)</label><textarea id="im_outcome">' + esc(r.outcome || '') + '</textarea></div>' +
     '<div class="act">' + (id ? '<button class="btn dng" onclick="delImp(\'' + id + '\')">ลบ</button>' : '') + '<button class="btn" onclick="closeModal()">ยกเลิก</button><button class="btn pri" onclick="saveImp(\'' + (id || '') + '\')">บันทึก</button></div>');
 }
+function imMethod(v) { const w = $('#im_moW'); if (w) { w.style.display = v === 'อื่น ๆ' ? 'block' : 'none'; if (v === 'อื่น ๆ') { const i = $('#im_mo'); if (i) i.focus(); } } }
 function void_() { }
 window['void'] = function () { };
 async function saveImp(id) {
   const g = k => $('#im_' + k).value.trim(), rid = id || 'i' + uid();
   if (!g('issue')) { toast('กรุณากรอกประเด็นที่ต้องพัฒนา', 'er'); return; }
-  const data = { id: rid, s: g('s'), issue: g('issue'), plan: g('plan'), method: g('method'), track: g('track'), status: g('status'), teachers: +g('teachers') || 0, plans: +g('plans') || 0, date: g('date'), outcome: g('outcome') };
+  if (g('method') === 'อื่น ๆ' && !($('#im_mo').value || '').trim()) { toast('กรุณาพิมพ์รูปแบบอื่น ๆ', 'er'); $('#im_mo').focus(); return; }
+  const data = { id: rid, s: g('s'), issue: g('issue'), plan: g('plan'), method: g('method'), methodOther: g('method') === 'อื่น ๆ' ? ($('#im_mo').value || '').trim() : '', track: g('track'), status: g('status'), teachers: +g('teachers') || 0, plans: +g('plans') || 0, date: g('date'), outcome: g('outcome') };
   try { await commit([{ op: 'set', c: 'improve', id: rid, data }]); closeModal(); toast('บันทึกแล้ว', 'ok'); render(); } catch (e) { toast(e.message, 'er'); }
 }
 async function delImp(id) { if (!(await ask('ลบรายการนี้?', { title: 'ยืนยันการลบ', ok: 'ลบ' }))) return; try { await commit([{ op: 'delete', c: 'improve', id }]); toast('ลบแล้ว', 'ok'); render(); } catch (e) { toast(e.message, 'er'); } }
@@ -1485,7 +1496,7 @@ function lineHtml() {
   if (LN.y == null) { LN.y = S.year || 2568; LN.sel = GROUPS.map((g, i) => i); LN.tpl = getSettings().lineTpl || LINE_TPL; LN.dl = getSettings().lineDl || ''; }
   const L = idx().schools.filter(s => !LN.sch || s.code === LN.sch);
   if (!idx().schools.length) return '<div class="card">' + empty('ต้องเพิ่มโรงเรียนก่อน (แท็บ "ข้อมูลโรงเรียน")') + '</div>';
-  return '<div class="stack"><div class="card">' + secHead('สร้างข้อความส่ง LINE แจ้งโรงเรียน', 'แยกรายโรงเรียน — ลิงก์เปิดหน้ากรอกเกรดของโรงเรียนนั้นโดยตรง (ต้องใช้ PIN โรงเรียน — ระบบสุ่มให้ได้ที่นี่) และแยกลิงก์รายกลุ่มสาระได้') +
+  return '<div class="stack"><div class="zone-h"><span class="zbadge cfg">① ตั้งค่า</span><span class="muted small">ปรับแต่งก่อน — ส่วนนี้ไม่ต้องคัดลอก</span></div><div class="card cfgc">' + secHead('สร้างข้อความส่ง LINE แจ้งโรงเรียน', 'แยกรายโรงเรียน — ลิงก์เปิดหน้ากรอกเกรดของโรงเรียนนั้นโดยตรง (ต้องใช้ PIN โรงเรียน — ระบบสุ่มให้ได้ที่นี่) และแยกลิงก์รายกลุ่มสาระได้') +
     lnPinPanel() + '<div class="grid2"><div><label class="f">ปีการศึกษา</label><input type="number" id="lnY" value="' + LN.y + '" style="width:100%" onchange="lnSet()"/></div><div><label class="f">กำหนดส่ง (ข้อความ)</label><input id="lnDl" value="' + esc(LN.dl) + '" placeholder="เช่น 30 พฤศจิกายน 2568" style="width:100%" onchange="lnSet()"/></div>' +
     '<div><label class="f">รูปแบบลิงก์</label><select id="lnMode" style="width:100%" onchange="lnSet()"><option value="all"' + (LN.mode === 'all' ? ' selected' : '') + '>ลิงก์เดียว (ทุกกลุ่มสาระ)</option><option value="split"' + (LN.mode === 'split' ? ' selected' : '') + '>แยกลิงก์รายกลุ่มสาระ</option></select></div>' +
     '<div><label class="f">โรงเรียน</label>' + sel('lnSch', [['', 'ทุกโรงเรียน (' + idx().schools.length + ')']].concat(idx().schools.map(s => [s.code, sName(s.code)])), LN.sch, 'lnPick') + '</div></div>' +
@@ -1493,7 +1504,8 @@ function lineHtml() {
     '<div style="margin-top:10px"><label class="f">ที่อยู่เว็บแอป (ลิงก์ฐาน)</label><input id="lnBase" value="' + esc(lnBase()) + '" style="width:100%" onchange="lnSet()"/><div class="muted small" style="margin-top:4px">ปกติเป็นลิงก์ /exec ของ Web app ที่ deploy แล้ว</div></div>' +
     '<div style="margin-top:10px"><label class="f">แม่แบบข้อความ — ใช้ {school} {year} {links} {pin} {deadline}</label><textarea id="lnTpl" style="min-height:150px;width:100%" onchange="lnSet()">' + esc(LN.tpl) + '</textarea></div>' +
     '<div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn" onclick="lnReset()">คืนค่าแม่แบบ</button><button class="btn" onclick="lnSaveTpl()">💾 จำแม่แบบ</button><button class="btn" onclick="lnCopyAll()">📋 คัดลอกทั้งหมด</button><button class="btn pri" onclick="lnDownload()">⬇️ ดาวน์โหลด .txt</button></div></div>' +
-    L.map(sc => '<div class="card"><div class="row" style="justify-content:space-between;align-items:center"><b>' + esc(sName(sc.code)) + '</b><div class="row"><button class="btn sm" onclick="acTemplate(\'' + sc.code + '\')">⬇️ แม่แบบ .xlsx</button><button class="btn sm pri" onclick="lnCopy(\'' + sc.code + '\',this)">คัดลอกข้อความ</button></div></div><div class="small" style="white-space:pre-wrap;word-break:break-all;margin-top:8px;background:#fafafa;border-radius:10px;padding:10px;max-height:240px;overflow:auto">' + esc(lnText(sc)) + '</div></div>').join('') + '</div>';
+    '<div class="zone-h"><span class="zbadge cp">② คัดลอกส่งโรงเรียน</span><span class="muted small">กด "คัดลอกข้อความ" ของแต่ละโรงเรียน แล้วนำไปวางใน LINE (' + L.length + ' โรงเรียน)</span></div>' +
+    L.map(sc => '<div class="card cpc"><div class="row" style="justify-content:space-between;align-items:center"><div class="row" style="gap:8px"><b>' + esc(sName(sc.code)) + '</b>' + (PINMAP.map[sc.code] ? bdg('พร้อมส่ง', 'g') : bdg('ยังไม่มี PIN', 'y')) + '</div><div class="row"><button class="btn sm" onclick="window.open(lnLink(\'' + sc.code + '\'),\'_blank\')">🌐 เปิดเว็บกรอกข้อมูลโรงเรียน</button><button class="btn sm" onclick="acTemplate(\'' + sc.code + '\')">⬇️ แม่แบบ .xlsx</button><button class="btn sm pri" onclick="lnCopy(\'' + sc.code + '\',this)">📋 คัดลอกข้อความ</button></div></div><div class="cpl">ข้อความที่จะคัดลอก</div><div class="small" style="white-space:pre-wrap;word-break:break-all;background:#fff;border:1px dashed #fca5a5;border-radius:10px;padding:10px;max-height:240px;overflow:auto">' + esc(lnText(sc)) + '</div></div>').join('') + '</div>';
 }
 function lnSet() { LN.y = +$('#lnY').value || LN.y; LN.dl = $('#lnDl').value; LN.mode = $('#lnMode').value; LN.base = $('#lnBase').value.trim(); LN.tpl = $('#lnTpl').value; render(); }
 function lnPick(v) { LN.sch = v; render(); }
@@ -1687,7 +1699,7 @@ async function updCopy(path, btn) {
 
 /* ---------- Boot ---------- */
 (function boot() {
-  try { const P = (window.APP_BOOT && APP_BOOT.params) || {}; if (P.f === 'grade' && P.s) { const gl = String(P.g || '').split(',').map(x => parseInt(x)).filter(x => x >= 0 && x < GROUPS.length); FORM = { s: String(P.s).replace(/\D/g, ''), y: parseInt(P.y) || null, g: gl.length ? gl : null }; S.page = 'gform'; document.body.classList.add('formmode'); } } catch (e) { }
+  try { const P = (window.APP_BOOT && APP_BOOT.params) || {}; if (P.f === 'grade' && P.s) { const gl = String(P.g || '').split(',').map(x => parseInt(x)).filter(x => x >= 0 && x < GROUPS.length); FORM = { s: String(P.s).replace(/\D/g, ''), y: parseInt(P.y) || null, g: gl.length ? gl : null }; if (AUTH && AUTH.role === 'school' && AUTH.sch !== FORM.s) setAuth(null); S.page = 'gform'; document.body.classList.add('formmode'); } } catch (e) { }
   try { if (sessionStorage.getItem('app_sim') === '1') { REAL_DATA = Store.data; Store.data = makeSim(); SIM = true; } } catch (e) {}
   const start = () => { try { render(); } catch (e) { console.error(e); const b = document.createElement('div'); b.className = 'note bad'; b.textContent = 'เริ่มระบบไม่สำเร็จ: ' + e.message; document.body.appendChild(b); } };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
