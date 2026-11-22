@@ -267,6 +267,13 @@ body.formmode #sb,body.formmode .mnav,body.formmode #burger,body.formmode #scrim
 @keyframes dlpop{0%{transform:scale(.6)}100%{transform:scale(1)}}
 @media print{.dla{display:none!important}}
 @media(prefers-reduced-motion:reduce){.dla,.dla *{animation:none!important;transition:none!important}}
+
+.fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.fcard{border:1px solid var(--line);border-radius:14px;padding:12px;background:#fff;transition:border-color .2s,box-shadow .2s,transform .2s}
+.fcard:hover{box-shadow:0 6px 18px rgba(0,0,0,.06);transform:translateY(-1px)}.fcard.ov{border-color:#dc2626;background:#fff5f5}
+.fcard.ok{border-color:#86efac;background:#f6fff9}.fcard.dim{opacity:.8}
+.fname{font-size:12px;color:#6b7280;margin-top:6px}.fname code{background:#f3f4f6;border-radius:5px;padding:1px 5px;color:#111;word-break:break-all}
+.fuse{font-size:12.5px;margin-top:4px}.fls{font-size:11.5px;color:#15803d;margin-top:6px;word-break:break-all}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
 </head>
@@ -406,7 +413,7 @@ if(typeof module!=='undefined') module.exports=OnetParser;
 
 'use strict';
 /* ===================== CORE: utils / store / auth / UI / charts / export / motion ===================== */
-const APP_VERSION = '1.2.3';
+const APP_VERSION = '1.2.4';
 const CREDIT_DESIGN = 'ออกแบบระบบโดย ดร.ปิยะพันธ์ พิชญ์ประเสริฐ';
 const CREDIT_DEV = 'พัฒนาระบบโดย นนทพัทธ์ หิรัญเรือง';
 const UPD_CENTER = ['https:', '', 'nonthaphathr.github.io', 'sisaket-edu-analytics', ''].join('/');
@@ -1214,8 +1221,9 @@ async function handlePdfFiles(files) {
   files = [...files].filter(f => /\.pdf$/i.test(f.name)); if (!files.length) { toast('เลือกไฟล์ PDF จากระบบ O-NET เท่านั้น', 'er'); return; }
   IMP.busy = true; IMP.pct = 0; showImpProgress();
   try { await ensurePdfjs(); } catch (e) { IMP.busy = false; toast(e.message, 'er'); render(); return; }
+  const expect = IMP.expect; IMP.expect = null;
   for (let i = 0; i < files.length; i++) {
-    try { const r = OnetParser.parse(await readPdfPages(files[i]), files[i].name); IMP.results = IMP.results.filter(x => x.file !== r.file); IMP.results.push(r); }
+    try { const r = OnetParser.parse(await readPdfPages(files[i]), files[i].name); if (expect && r.form && r.form !== expect) toast('ไฟล์ ' + files[i].name + ' เป็นฉบับ ' + r.form + ' — จัดเข้าช่องฉบับ ' + r.form + ' ให้แล้ว'); IMP.results = IMP.results.filter(x => x.file !== r.file); IMP.results.push(r); }
     catch (e) { IMP.results.push({ file: files[i].name, error: 'อ่านไฟล์ไม่สำเร็จ: ' + e.message }); }
     IMP.pct = Math.round((i + 1) / files.length * 100); showImpProgress(); await sleep(10);
   }
@@ -1300,6 +1308,7 @@ function bindImp() {
     ['dragleave', 'drop'].forEach(ev => d.addEventListener(ev, e => { e.preventDefault(); d.classList.remove('ov'); }));
     d.addEventListener('drop', e => { if (e.dataTransfer.files.length) handlePdfFiles(e.dataTransfer.files); });
   }
+  $$('.fcard').forEach(c => { if (c.dataset.b) return; c.dataset.b = 1; ['dragenter', 'dragover'].forEach(ev => c.addEventListener(ev, e => { e.preventDefault(); c.classList.add('ov'); })); ['dragleave', 'drop'].forEach(ev => c.addEventListener(ev, e => { e.preventDefault(); c.classList.remove('ov'); })); c.addEventListener('drop', e => { if (e.dataTransfer.files.length) { IMP.expect = +c.dataset.f; handlePdfFiles(e.dataTransfer.files); } }); });
   once(f, 'change', () => { if (f.files[0]) readAcadFile(f.files[0]); f.value = ''; });
   once(g, 'change', () => { if (g.files[0]) readSchoolFile(g.files[0]); g.value = ''; });
 }
@@ -1308,11 +1317,30 @@ function flowHtml(id, steps) {
   return '<div class="flow" id="' + id + '">' + steps.map((s, i) => '<div class="fstep ' + (s.s || '') + '"><div class="fn">' + (s.s === 'done' ? '✓' : (i + 1)) + '</div><div class="fb"><b>' + s.t + '</b>' + (s.d ? '<div class="fd">' + s.d + '</div>' : '') + (s.b || '') + '</div></div>').join('') + '</div>';
 }
 function refreshFlow(k) { const el = $('#flow_' + k); if (!el) return; el.outerHTML = k === 'ac' ? acFlowHtml(IMP.flowCode) : scFlowHtml(); bindImp(); }
+const PDF_FORMS = [
+  { g: 'main', f: 2, fn: 'StatbySchool_…', t: 'ฉบับ 2 สถิติรายมาตรฐาน', use: 'คะแนนรายวิชา + รายมาตรฐาน → Heatmap, วินิจฉัยจุดที่ต้องพัฒนา' },
+  { g: 'main', f: 6, fn: 'SbjStatbySchool_…', t: 'ฉบับ 6 สถิติรายวิชา', use: 'คะแนนเฉลี่ยรายวิชา เทียบประเทศ' },
+  { g: 'main', f: 4, fn: 'ScoreDistributionBySchool_…', t: 'ฉบับ 4 การกระจายคะแนน', use: 'กราฟการกระจายคะแนน' },
+  { g: 'help', f: 3, fn: 'StdQuality_…', t: 'ฉบับ 3 ระดับคุณภาพ', use: 'ใช้ดึง "ชื่อโรงเรียนที่ถูกต้อง" (ไม่มีตัวเลขวิเคราะห์)' },
+  { g: 'skip', f: 5, fn: 'ContentStatbySchool_…', t: 'ฉบับ 5 สถิติรายสาระ', use: 'เก็บไว้ แต่ยังไม่ใช้ในรายงาน' },
+  { g: 'skip', f: 1, fn: 'IndividualScore_…', t: 'ฉบับ 1 คะแนนรายบุคคล', use: 'เก็บเฉพาะค่าสรุป ไม่เก็บชื่อ/เลขบัตร และยังไม่ใช้ในรายงาน' }];
+const PDF_GROUPS = { main: ['ไฟล์หลัก', 'ใช้วิเคราะห์ในระบบ', 'cp'], help: ['ไฟล์ช่วย', 'ช่วยให้ชื่อโรงเรียนถูกต้อง', 'cfg'], skip: ['ไม่จำเป็น', 'ข้ามได้ — ยังไม่ใช้ในรายงาน', 'cfg'] };
+function pickPdf(f) { IMP.expect = f; $('#pdfIn').click(); }
+function pdfSecHtml() {
+  return ['main', 'help', 'skip'].map(g => '<div class="fsec"><div class="zone-h" style="margin:14px 0 8px"><span class="zbadge ' + PDF_GROUPS[g][2] + '">' + PDF_GROUPS[g][0] + '</span><span class="muted small">' + PDF_GROUPS[g][1] + '</span></div><div class="fgrid">' +
+    PDF_FORMS.filter(x => x.g === g).map(x => {
+      const rs = IMP.results.filter(r => r.form === x.f && !r.error), er = IMP.results.filter(r => r.form === x.f && r.error);
+      return '<div class="fcard' + (rs.length ? ' ok' : '') + (g === 'skip' ? ' dim' : '') + '" data-f="' + x.f + '"><div class="row" style="justify-content:space-between;align-items:flex-start;gap:6px"><b>' + x.t + '</b>' + (rs.length ? bdg('✓ ' + rs.length + ' ไฟล์', 'g') : bdg('รอไฟล์', 'n')) + '</div>' +
+        '<div class="fname">ชื่อไฟล์: <code>' + x.fn + '</code></div><div class="fuse">' + x.use + '</div>' +
+        (rs.length ? '<div class="fls">' + rs.slice(0, 3).map(r => esc(r.file)).join('<br/>') + (rs.length > 3 ? '<br/>…อีก ' + (rs.length - 3) + ' ไฟล์' : '') + '</div>' : '') +
+        '<button class="btn sm" style="margin-top:8px" onclick="pickPdf(' + x.f + ')">📂 เลือกไฟล์ฉบับ ' + x.f + '</button></div>';
+    }).join('') + '</div></div>').join('');
+}
 function pdfFlowHtml() {
   const has = IMP.results.length > 0;
   return flowHtml('flow_pdf', [
     { t: 'เตรียมไฟล์ PDF', d: 'ดาวน์โหลดรายงานจากระบบ O-NET ของ สทศ. (ฉบับที่ 1–6 เลือกได้หลายไฟล์พร้อมกัน ทั้ง ม.3 และ ม.6)', s: has ? 'done' : '' },
-    { t: 'ลากไฟล์มาวาง', d: 'ระบบอ่านไฟล์ในเครื่องของคุณ ไม่ส่งออกไปที่ใด และไม่เก็บชื่อ/เลขบัตรนักเรียน', s: has ? 'done' : 'on', b: '<div class="drop" id="drop" onclick="$(\'#pdfIn\').click()"><div style="font-size:30px">📄</div><b>ลากไฟล์ PDF มาวาง หรือแตะเพื่อเลือก</b><input type="file" id="pdfIn" accept=".pdf,application/pdf" multiple hidden/></div><div class="prog" id="impProg" style="margin-top:12px;display:' + (IMP.busy ? 'block' : 'none') + '"><i></i></div>' },
+    { t: 'วางไฟล์ตามประเภท', d: 'ระบบใช้ PDF แค่บางฉบับ — เลือกอัปโหลดตามช่องด้านล่าง หรือวางรวมทุกไฟล์ในกรอบเดียวก็ได้ (ระบบแยกฉบับให้เอง) • อ่านไฟล์ในเครื่อง ไม่ส่งออก และไม่เก็บชื่อ/เลขบัตรนักเรียน', s: has ? 'done' : 'on', b: '<div class="drop" id="drop" onclick="IMP.expect=null;$(\'#pdfIn\').click()" style="padding:16px"><div style="font-size:26px">📄</div><b>วางรวมได้ทุกฉบับ — ลากไฟล์มาวาง หรือแตะเพื่อเลือก</b><input type="file" id="pdfIn" accept=".pdf,application/pdf" multiple hidden/></div><div class="prog" id="impProg" style="margin-top:12px;display:' + (IMP.busy ? 'block' : 'none') + '"><i></i></div>' + pdfSecHtml() },
     { t: 'ตรวจและบันทึก', d: has ? 'ตรวจตารางด้านล่าง แล้วกดบันทึก' : 'หลังอ่านไฟล์เสร็จ จะมีตารางสรุปให้ตรวจก่อนบันทึก', s: has ? 'on' : 'lock' }]);
 }
 /* ---------- ผลสัมฤทธิ์: ฟอร์มออนไลน์ + Excel/CSV ---------- */
