@@ -254,6 +254,19 @@ body.formmode #sb,body.formmode .mnav,body.formmode #burger,body.formmode #scrim
 .card.cfgc{border:1.5px dashed #a5b4fc;background:#f8faff}
 .card.cpc{border:1px solid #fecaca;border-left:5px solid #dc2626;background:linear-gradient(90deg,#fff5f5,#fff 40%)}
 .cpl{font-size:12px;color:#b91c1c;font-weight:600;margin:10px 0 4px}
+
+.dla{position:fixed;left:50%;bottom:22px;transform:translate(-50%,24px);opacity:0;pointer-events:none;z-index:130;display:flex;gap:12px;align-items:center;min-width:260px;max-width:92vw;background:#fff;border:1px solid #fecaca;border-radius:16px;padding:12px 16px;box-shadow:0 14px 40px rgba(220,38,38,.22);transition:transform .35s cubic-bezier(.2,.9,.3,1.2),opacity .25s}
+.dla.show{transform:translate(-50%,0);opacity:1}
+.dli{flex:none;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;font-size:18px}
+.dla.run .dlic{animation:dlbounce .8s ease-in-out infinite}.dla.done .dli{background:#16a34a;animation:dlpop .45s cubic-bezier(.2,1.4,.4,1)}
+.dlb{min-width:0;flex:1}.dlb b{display:block;font-family:Kanit,sans-serif;font-weight:600;font-size:14px}.dlb small{display:block;color:#6b7280;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62vw}
+.dlp{height:5px;border-radius:5px;background:#fee2e2;margin-top:7px;overflow:hidden}.dlp i{display:block;height:100%;width:40%;border-radius:5px;background:linear-gradient(90deg,#fb7185,#dc2626)}
+.dla.run .dlp i{animation:dlslide 1s ease-in-out infinite}.dla.done .dlp i{width:100%;background:#16a34a;animation:none}
+@keyframes dlbounce{0%,100%{transform:translateY(-2px)}50%{transform:translateY(3px)}}
+@keyframes dlslide{0%{transform:translateX(-110%)}100%{transform:translateX(280%)}}
+@keyframes dlpop{0%{transform:scale(.6)}100%{transform:scale(1)}}
+@media print{.dla{display:none!important}}
+@media(prefers-reduced-motion:reduce){.dla,.dla *{animation:none!important;transition:none!important}}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
 </head>
@@ -393,7 +406,7 @@ if(typeof module!=='undefined') module.exports=OnetParser;
 
 'use strict';
 /* ===================== CORE: utils / store / auth / UI / charts / export / motion ===================== */
-const APP_VERSION = '1.2.2';
+const APP_VERSION = '1.2.3';
 const CREDIT_DESIGN = 'ออกแบบระบบโดย ดร.ปิยะพันธ์ พิชญ์ประเสริฐ';
 const CREDIT_DEV = 'พัฒนาระบบโดย นนทพัทธ์ หิรัญเรือง';
 const UPD_CENTER = ['https:', '', 'nonthaphathr.github.io', 'sisaket-edu-analytics', ''].join('/');
@@ -636,23 +649,58 @@ function printPage() {
   let f = $('#printFoot'); if (!f) { f = document.createElement('div'); f.id = 'printFoot'; $('#view').appendChild(f); }
   f.className = 'print-foot'; f.innerHTML = creditLines().map(esc).join(' &nbsp;|&nbsp; ') + '<br/>' + esc(getSettings().title) + ' v' + APP_VERSION;
   $$('.reveal').forEach(e => e.classList.add('in'));
-  setTimeout(() => window.print(), 80);
+  const t0 = document.title; document.title = exportName(); dlRun('กำลังเตรียมเอกสารพิมพ์…', exportName());
+  setTimeout(() => { dlHide(); window.print(); document.title = t0; }, 700);
 }
+/* ---------- แอนิเมชันสถานะการโหลด/ดาวน์โหลด ---------- */
+function dlRun(title, sub) {
+  let el = $('#dlA'); if (!el) { el = document.createElement('div'); el.id = 'dlA'; document.body.appendChild(el); }
+  clearTimeout(el._t); el.className = 'dla show run';
+  el.innerHTML = '<div class="dli"><span class="dlic">⬇</span></div><div class="dlb"><b>' + esc(title) + '</b><small>' + esc(sub || '') + '</small><div class="dlp"><i></i></div></div>';
+}
+function dlOk(title, sub, ms) {
+  const el = $('#dlA'); if (!el) return; clearTimeout(el._t);
+  el.className = 'dla show done'; el.innerHTML = '<div class="dli"><span class="dlic">✓</span></div><div class="dlb"><b>' + esc(title) + '</b><small>' + esc(sub || '') + '</small><div class="dlp"><i></i></div></div>';
+  el._t = setTimeout(() => { el.className = 'dla'; }, ms || 2600);
+}
+function dlHide() { const el = $('#dlA'); if (el) { clearTimeout(el._t); el.className = 'dla'; } }
+function fileTag() { const sc = S.sch && col('schools')[S.sch]; return sc ? '_' + sc.name : ''; }
+function exportName() { return safeName(docTitle() + fileTag()); }
 function downloadBlob(name, type, content) {
+  dlRun('กำลังเตรียมไฟล์…', name); const t0 = Date.now();
   const b = new Blob([content], { type: type }), a = document.createElement('a');
   a.href = URL.createObjectURL(b); a.download = name; document.body.appendChild(a); a.click();
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 600);
+  setTimeout(() => dlOk('ดาวน์โหลดแล้ว', name), Math.max(0, 900 - (Date.now() - t0)));
 }
 function safeName(s) { return String(s).replace(/[\\/:*?"<>|\s]+/g, '_').slice(0, 60); }
 function exportWord() {
   const v = $('#view').cloneNode(true);
   $$('button,.btn,.tabs,.noprint,select,input,textarea,#printHead,#printFoot,svg', v).forEach(e => { if (e.tagName === 'SELECT') { e.replaceWith(document.createTextNode(e.options[e.selectedIndex] ? e.options[e.selectedIndex].text : '')); } else e.remove(); });
   $$('.reveal', v).forEach(e => e.classList.remove('reveal'));
+  $$('.noexp', v).forEach(e => e.remove());
+  // กลุ่มการ์ดตัวเลข (.grid) → ตารางแถวเดียว ให้เป็นสัดส่วนใน Word
+  $$('.grid', v).forEach(g => {
+    const cells = [...g.children]; if (!cells.length) return;
+    const w = Math.floor(100 / Math.min(cells.length, 4)), tb = document.createElement('table'); tb.setAttribute('width', '100%'); tb.style.cssText = 'border-collapse:separate;border-spacing:6pt;margin:6pt 0';
+    let tr; cells.forEach((c, i) => {
+      if (i % 4 === 0) { tr = document.createElement('tr'); tb.appendChild(tr); }
+      const td = document.createElement('td'); td.setAttribute('width', w + '%'); td.style.cssText = 'border:1px solid #f3c1c1;background:#fff7f7;padding:8pt 10pt;vertical-align:top';
+      if (c.querySelector('.v')) {
+        const l = $('.l', c), vv = $('.v', c), ss = $('.s', c);
+        td.innerHTML = (l ? '<div style="font-size:12pt;color:#555">' + l.innerHTML + '</div>' : '') + '<div style="font-size:24pt;font-weight:bold;color:#b91c1c;line-height:1.1">' + (vv ? vv.innerHTML : '') + '</div>' + (ss ? '<div style="font-size:11pt;color:#777">' + ss.innerHTML + '</div>' : '');
+      } else td.innerHTML = c.innerHTML;
+      tr.appendChild(td);
+    });
+    g.replaceWith(tb);
+  });
+  $$('.hero', v).forEach(h => { const tb = document.createElement('table'); tb.setAttribute('width', '100%'); tb.style.cssText = 'border-collapse:collapse;margin:4pt 0 8pt'; const td = document.createElement('td'); td.style.cssText = 'border:0;border-left:5px solid #dc2626;background:#fde8e8;padding:8pt 12pt'; td.innerHTML = h.innerHTML; const tr = document.createElement('tr'); tr.appendChild(td); tb.appendChild(tr); h.replaceWith(tb); });
+  $$('table', v).forEach(t => { const ths = $$('thead th', t); if (ths.length && !ths[ths.length - 1].textContent.trim()) { const n = ths.length - 1; $$('tr', t).forEach(r => { const c = r.children[n]; if (c) c.remove(); }); } });
   const S = getSettings(), css = 'body{font-family:"TH SarabunPSK","Sarabun",Tahoma,sans-serif;font-size:15pt}table{border-collapse:collapse;width:100%;margin:6pt 0}th,td{border:1px solid #999;padding:3pt 6pt;font-size:13pt}th{background:#fde8e8}h1,h2,h3{color:#991b1b}.card{margin-bottom:10pt}.bdg{font-weight:bold}';
   const html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>' + esc(docTitle()) + '</title><style>' + css + '</style></head><body>' +
-    '<table style="border:0"><tr><td style="border:0;width:' + (orgLogoSrc() ? 124 : 60) + 'pt">' + (orgLogoSrc() ? '<img src="' + esc(orgLogoSrc()) + '" width="56" height="56"/> ' : '') + '<img src="' + esc(logoSrc()) + '" width="56" height="56"/></td><td style="border:0"><b style="font-size:17pt">' + esc(S.title) + '</b><br/>' + esc(S.org) + ' — ' + esc(docTitle()) + '<br/><small>วันที่ออกรายงาน ' + new Date().toLocaleDateString('th-TH', { dateStyle: 'long' }) + '</small></td></tr></table><hr/>' +
+    '<table style="border:0"><tr><td style="border:0;width:' + (orgLogoSrc() ? 124 : 60) + 'pt">' + (orgLogoSrc() ? '<img src="' + esc(orgLogoSrc()) + '" width="56" height="56"/> ' : '') + '<img src="' + esc(logoSrc()) + '" width="56" height="56"/></td><td style="border:0"><b style="font-size:17pt">' + esc(S.title) + '</b><br/>' + esc(S.org) + ' — ' + esc(docTitle()) + (fileTag() ? '<br/>โรงเรียน: ' + esc(fileTag().slice(1)) : '') + '<br/><small>วันที่ออกรายงาน ' + new Date().toLocaleDateString('th-TH', { dateStyle: 'long' }) + '</small></td></tr></table><hr/>' +
     v.innerHTML + '<hr/><p style="text-align:center;font-size:12pt;color:#555">' + creditLines().map(esc).join('<br/>') + '</p></body></html>';
-  downloadBlob(safeName(docTitle()) + '.doc', 'application/msword;charset=utf-8', '﻿' + html);
+  downloadBlob(exportName() + '.doc', 'application/msword;charset=utf-8', '﻿' + html);
   toast('ส่งออกไฟล์ Word แล้ว', 'ok');
 }
 function exportCsv() {
@@ -665,7 +713,7 @@ function exportCsv() {
     out.push('');
   });
   out.push(q(CREDIT_DESIGN), q(CREDIT_DEV));
-  downloadBlob(safeName(docTitle()) + '.csv', 'text/csv;charset=utf-8', '﻿' + out.join('\r\n'));
+  downloadBlob(exportName() + '.csv', 'text/csv;charset=utf-8', '﻿' + out.join('\r\n'));
   toast('ส่งออก CSV แล้ว', 'ok');
 }
 function exportMenu() {
@@ -1122,7 +1170,7 @@ PAGES.imp = function () {
     '<div class="card">' + secHead('รายการติดตามการพัฒนา', '', (isAdmin() ? '<button class="btn pri noprint" onclick="editImp()">➕ เพิ่มรายการ</button>' : '')) +
     '<div class="row noprint" style="margin-bottom:10px"><div>' + sel('impf', [['', 'ทุกสถานะ']].concat(STATUS.map(s => [s, s])), f, 'setImpF') + '</div></div>' +
     tbl(['โรงเรียน', 'ประเด็นที่ต้องพัฒนา', 'แนวทางการพัฒนา', 'วิธีติดตาม', { h: 'ครู/แผน', c: 'n' }, 'ผลลัพธ์', 'สถานะ', ''], rows.map(r => [r.s ? esc(sName(r.s)) : '<span class="muted">ทั้งสังกัด</span>', esc(r.issue), esc(r.plan) + ' ' + bdg(r.method === 'อื่น ๆ' && r.methodOther ? 'อื่น ๆ: ' + r.methodOther : r.method, 'b'), esc(r.track || ''), (r.teachers || 0) + ' / ' + (r.plans || 0), '<span class="small">' + esc(r.outcome || '–') + '</span>', bdg(r.status, r.status === 'เสร็จสิ้น' ? 'g' : r.status === 'วางแผน' ? 'n' : 'y'), isAdmin() ? '<button class="btn sm noprint" onclick="editImp(\'' + r.id + '\')">แก้ไข</button>' : ''])) + '</div>' +
-    '<div class="card"><h3>ตัวอย่างการเชื่อมโยงผลวิเคราะห์ → แนวทางพัฒนา → วิธีติดตาม</h3><div class="sub">กด "ใช้เป็นต้นแบบ" เพื่อสร้างรายการใหม่</div>' +
+    '<div class="card noprint noexp"><h3>ตัวอย่างการเชื่อมโยงผลวิเคราะห์ → แนวทางพัฒนา → วิธีติดตาม</h3><div class="sub">กด "ใช้เป็นต้นแบบ" เพื่อสร้างรายการใหม่</div>' +
     tbl(['ผลการวิเคราะห์', 'แนวทางการพัฒนา', 'วิธีติดตาม', ''], SUGG.map((s, i) => [esc(s[0]), esc(s[1]), esc(s[2]), isAdmin() ? '<button class="btn sm noprint" onclick="editImp(null,' + i + ')">ใช้เป็นต้นแบบ</button>' : ''])) + '</div></div>';
 };
 function setImpF(v) { S.tab.impf = v; render(); }
@@ -1151,7 +1199,7 @@ async function delImp(id) { if (!(await ask('ลบรายการนี้?'
 const IMP = { results: [], busy: false, acadRows: null };
 const PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 const FORM_NAME = { 1: 'ฉบับ 1 คะแนนรายบุคคล', 2: 'ฉบับ 2 สถิติรายมาตรฐาน', 3: 'ฉบับ 3 ระดับคุณภาพ', 4: 'ฉบับ 4 การกระจายคะแนน', 5: 'ฉบับ 5 สถิติรายสาระ', 6: 'ฉบับ 6 สถิติรายวิชา' };
-const loadScript = (src, test) => new Promise((res, rej) => { if (test()) return res(); const s = document.createElement('script'); s.src = src; s.onload = () => res(); s.onerror = () => rej(new Error('โหลดไลบรารีไม่สำเร็จ (ตรวจอินเทอร์เน็ต)')); document.head.appendChild(s); });
+const loadScript = (src, test) => new Promise((res, rej) => { if (test()) return res(); dlRun('กำลังโหลดส่วนเสริม…', src.split('/').pop().replace(/\?.*/, '')); const s = document.createElement('script'); s.src = src; s.onload = () => { dlHide(); res(); }; s.onerror = () => { dlHide(); rej(new Error('โหลดไลบรารีไม่สำเร็จ (ตรวจอินเทอร์เน็ต)')); }; document.head.appendChild(s); });
 async function ensurePdfjs() {
   for (let i = 0; i < 40 && !window.pdfjsLib; i++) { if (i === 0) { try { await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', () => !!window.pdfjsLib); } catch (e) { } } await sleep(100); }
   if (!window.pdfjsLib) throw new Error('โหลดตัวอ่าน PDF ไม่สำเร็จ (ตรวจอินเทอร์เน็ต)');
@@ -1522,7 +1570,7 @@ async function clip_(tx) { try { await navigator.clipboard.writeText(tx); } catc
 async function lnCopy(code, b) { await clip_(lnText(col('schools')[code])); const o = b.textContent; b.textContent = '✓ คัดลอกแล้ว'; setTimeout(() => b.textContent = o, 1800); }
 function lnAllText() { return idx().schools.filter(s => (!LN.sch || s.code === LN.sch) && lnVis(s)).map(sc => '=== ' + sc.name + ' ===\n' + lnText(sc)).join('\n\n'); }
 async function lnCopyAll() { await clip_(lnAllText()); toast('คัดลอกข้อความทั้งหมดแล้ว', 'ok'); }
-function lnDownload() { downloadBlob('ข้อความLINE_ผลการเรียน_' + LN.y + '.txt', 'text/plain;charset=utf-8', '\ufeff' + lnAllText()); }
+function lnDownload() { downloadBlob('ข้อความLINE_ผลการเรียน_' + LN.y + (LN.sch ? '_' + sName(LN.sch) : '') + '.txt', 'text/plain;charset=utf-8', '\ufeff' + lnAllText()); }
 
 /* ---------- หน้ากรอกเกรด (เปิดจากลิงก์ ?f=grade&s=รหัส&y=ปี&g=ดัชนีกลุ่มสาระ) ---------- */
 PAGES.gform = function () {
@@ -1695,11 +1743,11 @@ function updGo(i) {
 }
 function updOpenEditor() { const u = (UPD.info && UPD.info.editor) || 'https://script.google.com/home'; window.open(u, '_blank'); if (!UPD.info) toast('ถ้าเปิดไม่ถูกโปรเจกต์ ให้เข้าจาก ส่วนขยาย › Apps Script ในชีต', 'ok'); }
 async function updCopy(path, btn) {
-  const old = btn.textContent; btn.disabled = true; btn.textContent = 'กำลังดึง…';
+  const old = btn.textContent; btn.disabled = true; btn.textContent = 'กำลังดึง…'; dlRun('กำลังดึงโค้ดจากศูนย์อัปเดต…', path);
   try { const r = await fetch(UPD_CENTER + path + '?t=' + Date.now()); if (!r.ok) throw new Error('HTTP ' + r.status); const tx = await r.text();
     try { await navigator.clipboard.writeText(tx); } catch (e) { const ta = document.createElement('textarea'); ta.value = tx; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
-    btn.textContent = '✓ คัดลอกแล้ว'; toast('คัดลอก ' + path + ' แล้ว (' + tx.length.toLocaleString() + ' ตัวอักษร)', 'ok'); }
-  catch (e) { toast('ดึงโค้ดไม่ได้: ' + e.message, 'er'); btn.textContent = old; }
+    btn.textContent = '✓ คัดลอกแล้ว'; dlOk('คัดลอกโค้ดแล้ว', path); toast('คัดลอก ' + path + ' แล้ว (' + tx.length.toLocaleString() + ' ตัวอักษร)', 'ok'); }
+  catch (e) { dlHide(); toast('ดึงโค้ดไม่ได้: ' + e.message, 'er'); btn.textContent = old; }
   setTimeout(() => { btn.textContent = old; btn.disabled = false; }, 2200);
 }
 
