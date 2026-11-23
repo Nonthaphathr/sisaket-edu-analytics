@@ -274,6 +274,29 @@ body.formmode #sb,body.formmode .mnav,body.formmode #burger,body.formmode #scrim
 .fcard.ok{border-color:#86efac;background:#f6fff9}.fcard.dim{opacity:.8}
 .fname{font-size:12px;color:#6b7280;margin-top:6px}.fname code{background:#f3f4f6;border-radius:5px;padding:1px 5px;color:#111;word-break:break-all}
 .fuse{font-size:12.5px;margin-top:4px}.fls{font-size:11.5px;color:#15803d;margin-top:6px;word-break:break-all}
+
+/* ---- ฟอร์มโรงเรียน: โฟกัสช่องปี ---- */
+#yrTint{position:fixed;inset:0;background:rgba(120,20,30,.42);backdrop-filter:blur(1.5px);z-index:60;animation:yrIn .25s ease}
+@keyframes yrIn{from{opacity:0}to{opacity:1}}
+.yrbox{padding:2px 0}
+.yrbox .yrw,.yrbox #yrOk{display:none}
+.yrbox.hot{position:relative;z-index:61;background:#fff;border:2px solid #dc2626;border-radius:16px;padding:14px 16px;box-shadow:0 0 0 6px rgba(220,38,38,.18),0 18px 40px rgba(120,20,30,.35);animation:yrPulse 1.6s ease-in-out infinite}
+.yrbox.hot .yrw{display:block;color:#b91c1c;font-weight:700;margin:8px 0;font-size:14px}
+.yrbox.hot #yrOk{display:inline-flex}
+.yrbox.hot input{font-size:22px;font-weight:700;border-color:#dc2626}
+@keyframes yrPulse{50%{box-shadow:0 0 0 12px rgba(220,38,38,.08),0 18px 40px rgba(120,20,30,.35)}}
+.sumh{display:flex;justify-content:space-between;gap:12px;align-items:flex-end;flex-wrap:wrap}
+.sumh small{display:block;color:var(--mute,#6b7280);font-size:12px}.sumh b{font-size:17px}
+.sumy{text-align:right}.sumy b{font-size:30px;line-height:1;background:linear-gradient(135deg,#dc2626,#f97316);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+
+/* ---- รายงาน/ปก ---- */
+.rpcov{position:relative;max-width:360px;margin:0 auto;aspect-ratio:1054/1492;border-radius:10px;overflow:hidden;box-shadow:0 10px 30px rgba(120,20,30,.18);background:#fff7ed}
+.rpcov img{width:100%;height:100%;display:block;object-fit:cover}
+.rpsk{position:absolute;inset:0;display:grid;place-items:center;color:#9a3412;font-size:13px;background:linear-gradient(110deg,#fff7ed 30%,#ffedd5 50%,#fff7ed 70%);background-size:200% 100%;animation:shim 1.4s infinite}
+@keyframes shim{to{background-position:-200% 0}}
+.rpsec{display:grid;gap:6px;margin-top:6px}.chk{display:flex;gap:8px;align-items:center;cursor:pointer}
+.rptprev{max-height:520px;overflow:auto;border:1px solid var(--line);border-radius:12px;padding:16px;background:#fff;font-size:14px}
+.rptprev table{font-size:13px}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
 </head>
@@ -413,7 +436,7 @@ if(typeof module!=='undefined') module.exports=OnetParser;
 
 'use strict';
 /* ===================== CORE: utils / store / auth / UI / charts / export / motion ===================== */
-const APP_VERSION = '1.2.4';
+const APP_VERSION = '1.3.0';
 const CREDIT_DESIGN = 'ออกแบบระบบโดย ดร.ปิยะพันธ์ พิชญ์ประเสริฐ';
 const CREDIT_DEV = 'พัฒนาระบบโดย นนทพัทธ์ หิรัญเรือง';
 const UPD_CENTER = ['https:', '', 'nonthaphathr.github.io', 'sisaket-edu-analytics', ''].join('/');
@@ -498,7 +521,7 @@ function ask(html, opts) { // คืน Promise<true|false>
   opts = opts || {};
   return new Promise(res => {
     _mdResolve = res;
-    openModal('<h3>' + esc(opts.title || 'ยืนยัน') + '</h3><div>' + html + '</div><div class="act"><button class="btn" onclick="closeModal(false)">ยกเลิก</button><button class="btn pri" onclick="closeModal(true)">' + esc(opts.ok || 'ตกลง') + '</button></div>');
+    openModal('<h3>' + esc(opts.title || 'ยืนยัน') + '</h3><div>' + html + '</div><div class="act"><button class="btn" onclick="closeModal(false)">' + esc(opts.cancel || 'ยกเลิก') + '</button><button class="btn pri" onclick="closeModal(true)">' + esc(opts.ok || 'ตกลง') + '</button></div>', opts.wide);
   });
 }
 const alertBox = (msg, title) => new Promise(res => { _mdResolve = res; openModal('<h3>' + esc(title || 'แจ้งเตือน') + '</h3><div>' + msg + '</div><div class="act"><button class="btn pri" onclick="closeModal(true)">ปิด</button></div>'); });
@@ -724,7 +747,7 @@ function exportCsv() {
   toast('ส่งออก CSV แล้ว', 'ok');
 }
 function exportMenu() {
-  return '<span class="noprint" style="display:inline-flex;gap:6px"><button class="btn sm" onclick="printPage()" title="พิมพ์ / บันทึกเป็น PDF">🖨 พิมพ์/PDF</button><button class="btn sm" onclick="exportWord()">📄 Word</button><button class="btn sm" onclick="exportCsv()">📊 CSV</button></span>';
+  return '<span class="noprint" style="display:inline-flex;gap:6px"><button class="btn sm" onclick="printPage()" title="พิมพ์ / บันทึกเป็น PDF">🖨 พิมพ์/PDF</button><button class="btn sm" onclick="exportWord()">📄 Word</button><button class="btn sm" onclick="exportCsv()">📊 CSV</button><button class="btn sm" onclick="go(\'report\')" title="รายงานสรุปทั้งระบบพร้อมปก">📘 รายงาน</button></span>';
 }
 
 /* ===================== ANALYSIS: settings / index / aggregates / simulation ===================== */
@@ -885,8 +908,8 @@ const S = { page: 'home', tab: {}, year: null, level: 'M3', sch: '', cn: 'TH', g
 const NAV = [
   { h: 'Dashboard' }, { k: 'home', i: '🏠', t: 'ภาพรวมคุณภาพการศึกษา', m: 'ภาพรวม' }, { k: 'subj', i: '📚', t: 'วิเคราะห์รายกลุ่มสาระ', m: 'กลุ่มสาระ' }, { k: 'heat', i: '🟥', t: 'Heatmap รายมาตรฐาน', m: 'Heatmap' }, { k: 'sup', i: '🧭', t: 'วิเคราะห์เพื่อการนิเทศ', m: 'นิเทศ' },
   { h: 'การวิเคราะห์' }, { k: 'acad', i: '🎓', t: 'ผลสัมฤทธิ์ทางการเรียน', m: 'ผลการเรียน' }, { k: 'onet', i: '📈', t: 'ผลการทดสอบ O-NET', m: 'O-NET' }, { k: 'diag', i: '🔎', t: 'วินิจฉัยจุดที่ต้องพัฒนา', m: 'วินิจฉัย' }, { k: 'imp', i: '✅', t: 'ติดตามผลการพัฒนา', m: 'ติดตาม' },
-  { h: 'จัดการระบบ' }, { k: 'data', i: '⬆️', t: 'นำเข้าข้อมูล', m: 'นำเข้า' }, { k: 'set', i: '⚙️', t: 'ตั้งค่า', m: 'ตั้งค่า' }];
-const FILT = { home: 'yl', subj: 'yl', heat: 'yl', sup: 'yl', acad: 'y', onet: 'yl', diag: 'yl' };
+  { h: 'จัดการระบบ' }, { k: 'report', i: '📘', t: 'ส่งออกเอกสารรายงาน', m: 'รายงาน' }, { k: 'data', i: '⬆️', t: 'นำเข้าข้อมูล', m: 'นำเข้า' }, { k: 'set', i: '⚙️', t: 'ตั้งค่า', m: 'ตั้งค่า' }];
+const FILT = { report: '', home: 'yl', subj: 'yl', heat: 'yl', sup: 'yl', acad: 'y', onet: 'yl', diag: 'yl' };
 const PAGES = {};
 const navTitle = k => k === 'gform' ? 'บันทึกผลการเรียน' : (NAV.find(n => n.k === k) || {}).t || '';
 
@@ -1384,8 +1407,13 @@ function acCalc(gi) {
 async function acSave() {
   if (!(await needAuth())) return; const code = $('#acS').value, y = +$('#acY').value; if (!code || !y) { toast('เลือกโรงเรียนและปีการศึกษา', 'er'); return; }
   if (AUTH && AUTH.role === 'school' && !SIM && AUTH.sch !== code) { toast('บันทึกได้เฉพาะโรงเรียนของท่าน', 'er'); return; }
-  const ops = []; GROUPS.forEach((g, gi) => { if (!$('.acin[data-g="' + gi + '"][data-c="0"]')) return; const c = ACOLS.map((x, ci) => +($('.acin[data-g="' + gi + '"][data-c="' + ci + '"]').value) || 0); if (sum(c) > 0) ops.push({ op: 'set', c: 'acad', id: code + '|' + y + '|' + g.k, data: { s: code, y, g: g.k, c } }); });
+  const ops = [], rows = []; GROUPS.forEach((g, gi) => { if (!$('.acin[data-g="' + gi + '"][data-c="0"]')) return; const c = ACOLS.map((x, ci) => +($('.acin[data-g="' + gi + '"][data-c="' + ci + '"]').value) || 0); if (sum(c) > 0) { ops.push({ op: 'set', c: 'acad', id: code + '|' + y + '|' + g.k, data: { s: code, y, g: g.k, c } }); const st = acadStat({ c }); rows.push([esc(g.k), fmtI(st.n), fmt(st.mean), fmt(st.pass, 1), fmt(st.p3, 1)]); } });
   if (!ops.length) { toast('ยังไม่ได้กรอกข้อมูล', 'er'); return; }
+  const old = Object.keys(col('acad')).filter(k => k.indexOf(code + '|' + y + '|') === 0).length;
+  const ok = await ask('<div class="sumbox"><div class="sumh"><div><small>โรงเรียน</small><b>' + esc(sName(code)) + '</b></div><div class="sumy"><small>ปีการศึกษา</small><b>' + y + '</b></div></div>' +
+    '<div class="note" style="margin:10px 0">ตรวจสอบ <b>ปีการศึกษา</b> และตัวเลขด้านล่างให้ถูกต้องก่อนกดส่ง' + (old ? ' • <b>ปีนี้มีข้อมูลเดิมอยู่ ' + old + ' กลุ่มสาระ — การส่งจะเขียนทับ</b>' : '') + '</div>' +
+    tbl(['กลุ่มสาระ', { h: 'ผู้เรียน (คน)', c: 'n' }, { h: 'เฉลี่ย', c: 'n' }, { h: 'ผ่าน %', c: 'n' }, { h: '3+ %', c: 'n' }], rows) + '<div class="muted small" style="margin-top:8px">กรอก ' + ops.length + ' จาก ' + GROUPS.length + ' กลุ่มสาระ</div></div>', { title: 'สรุปข้อมูลก่อนส่ง', ok: '✅ ยืนยันส่งข้อมูล', cancel: '← กลับไปแก้ไข', wide: true });
+  if (!ok) return;
   try { await commit(ops); toast(FORM ? 'ส่งข้อมูลเรียบร้อย ขอบคุณครับ/ค่ะ (' + ops.length + ' กลุ่มสาระ)' : 'บันทึกผลการเรียน ' + ops.length + ' กลุ่มสาระแล้ว', 'ok'); S.year = y; renderChrome(); } catch (e) { toast(e.message, 'er'); }
 }
 function csvParse(txt) {
@@ -1605,12 +1633,18 @@ PAGES.gform = function () {
   const s = col('schools')[FORM.s]; if (!s) return '<div class="card">' + empty('ไม่พบโรงเรียนตามลิงก์นี้ — กรุณาติดต่อกลุ่มงานนิเทศ') + '</div>';
   const gis = FORM.g && FORM.g.length ? FORM.g : GROUPS.map((g, i) => i), m = IMP.acMode || 'form';
   return '<div class="stack"><div class="hero"><h2>' + esc(s.name) + '</h2><p>กรอกผลสัมฤทธิ์ทางการเรียน' + (FORM.g ? ' • ' + gis.map(i => esc(GROUPS[i].k)).join(', ') : ' (ทุกกลุ่มสาระ)') + '</p></div>' +
-    '<div class="card"><div class="row" style="align-items:flex-end"><div><label class="f">ปีการศึกษา</label><input type="number" id="acY" value="' + (FORM.y || S.year || '') + '" style="width:110px" onchange="acLoad(FORM.s)"/></div><div class="grow"></div>' + (AUTH ? '<span class="bdg g">เข้าสู่ระบบแล้ว</span>' : '<button class="btn pri glow" onclick="openLogin()">🔐 เข้าสู่ระบบด้วย PIN โรงเรียน</button>') + '</div>' +
+    '<div class="card"><div class="row" style="align-items:flex-end"><div class="yrbox' + (FORM.yOk ? '' : ' hot') + '" id="yrBox"><label class="f">ปีการศึกษา (พ.ศ.)</label><input type="number" id="acY" value="' + (FORM.y || S.year || '') + '" style="width:130px" onchange="FORM.yOk=true;yrDismiss();acLoad(FORM.s)"/><div class="yrw">⚠️ อย่าลืมตรวจสอบปีการศึกษาที่ส่งข้อมูล</div><button class="btn pri sm" id="yrOk" onclick="yrConfirm()">✓ ปีถูกต้อง เริ่มกรอกข้อมูล</button></div><div class="grow"></div>' + (AUTH ? '<span class="bdg g">เข้าสู่ระบบแล้ว</span>' : '<button class="btn pri glow" onclick="openLogin()">🔐 เข้าสู่ระบบด้วย PIN โรงเรียน</button>') + '</div>' +
     '<input type="hidden" id="acS" value="' + esc(FORM.s) + '"/>' + segHtml() +
     (m === 'x' ? acFlowHtml(FORM.s) : '<div class="muted small">กรอกจำนวนผู้เรียนในแต่ละระดับผลการเรียน ระบบคำนวณค่าเฉลี่ยให้อัตโนมัติ แล้วกดบันทึก</div>' + acTableHtml(gis) +
     '<div class="row" style="margin-top:12px;justify-content:flex-end"><button class="btn pri" onclick="acSave()">💾 บันทึกผลการเรียน</button></div>') + '</div></div>';
 };
-PAGES.after_gform = function () { acLoad(FORM.s); bindImp(); };
+PAGES.after_gform = function () { acLoad(FORM.s); bindImp(); if (!FORM.yOk) yrTint(); };
+function yrTint() {
+  if ($('#yrTint')) return; const t = document.createElement('div'); t.id = 'yrTint'; t.onclick = () => { const i = $('#acY'); if (i) { i.focus(); i.select(); } }; document.body.appendChild(t);
+  const i = $('#acY'); if (i) { setTimeout(() => { i.scrollIntoView({ block: 'center', behavior: 'smooth' }); i.focus(); i.select(); }, 120); }
+}
+function yrDismiss() { const t = $('#yrTint'); if (t) t.remove(); const b = $('#yrBox'); if (b) b.classList.remove('hot'); }
+function yrConfirm() { const y = +($('#acY') || {}).value; if (!y || y < 2500 || y > 2700) { toast('กรอกปีการศึกษา (พ.ศ.) ให้ถูกต้อง เช่น 2568', 'er'); const i = $('#acY'); if (i) i.focus(); return; } FORM.yOk = true; yrDismiss(); acLoad(FORM.s); }
 
 /* ---------- PIN โรงเรียน: สุ่ม/ดู/ส่งออก ---------- */
 const PINMAP = { loaded: false, loading: false, map: {}, set: [], show: false };
@@ -1653,7 +1687,7 @@ function pinMgrHtml() {
 const UPD = { info: null, loading: false, step: 0, timer: null, paused: false };
 PAGES.set = function () {
   const t = curTab('set', 'gen'), st = getSettings();
-  let h = tabsHtml('set', [['gen', '🏷 ทั่วไป & เกณฑ์'], ['logo', '🖼 โลโก้'], ['lab', '✏️ ชื่อโรงเรียน/วิชา'], ['sec', '🔐 รหัสผ่าน'], ['sim', '🧪 โหมดจำลอง'], ['upd', '⬆️ อัปเดตระบบ']]);
+  let h = tabsHtml('set', [['gen', '🏷 ทั่วไป & เกณฑ์'], ['logo', '🖼 โลโก้'], ['cover', '📘 ปกรายงาน'], ['lab', '✏️ ชื่อโรงเรียน/วิชา'], ['sec', '🔐 รหัสผ่าน'], ['sim', '🧪 โหมดจำลอง'], ['upd', '⬆️ อัปเดตระบบ']]);
   if (t === 'gen') {
     const F = (k, l, ty, w, step) => '<div><label class="f">' + l + '</label><input type="' + (ty || 'text') + '" id="st_' + k + '" value="' + esc(st[k]) + '" ' + (step ? 'step="' + step + '" ' : '') + 'style="width:' + (w || '100%') + '"/></div>';
     return h + '<div class="stack"><div class="card">' + secHead('ข้อมูลทั่วไป') + '<div class="grid2">' + F('title', 'ชื่อระบบ') + F('short', 'ชื่อย่อ (แถบด้านข้าง)') + F('org', 'หน่วยงาน') + F('total', 'จำนวนโรงเรียนทั้งหมดในสังกัด', 'number') + '</div></div>' +
@@ -1662,6 +1696,7 @@ PAGES.set = function () {
       '<div class="note info small" style="margin-top:10px">สี: ต่ำกว่าประเทศ ≥ ช่วงที่ตั้ง = แดง • ใกล้เคียง = เหลือง • สูงกว่า ≥ ช่วงที่ตั้ง = เขียว</div>' +
       '<div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn pri" onclick="saveGen()">💾 บันทึกการตั้งค่า</button></div></div></div>';
   }
+  if (t === 'cover') return h + coverSettingsHtml();
   if (t === 'logo') return h + '<div class="card">' + secHead('โลโก้ระบบ', 'แสดงที่แถบด้านข้าง หน้าเข้าสู่ระบบ ไอคอนแท็บ และหัวเอกสาร export') +
     '<div class="row" style="gap:20px"><div style="width:120px;height:120px;border:1px solid var(--line);border-radius:22px;display:grid;place-items:center;background:#fff"><img id="logoPrev" src="' + esc(logoSrc()) + '" style="max-width:92px;max-height:92px;object-fit:contain"/></div><div class="grow"><div class="muted small" style="margin-bottom:10px">รองรับ PNG / JPG / SVG — ระบบย่อภาพไม่เกิน 512px อัตโนมัติ' + (MODE === 'gas' ? ' แล้วเก็บลง Google Drive' : ' (โหมดทดลอง: เก็บในเครื่องนี้ชั่วคราว)') + '</div><div class="row"><label class="btn pri" style="cursor:pointer">📂 เลือกรูปโลโก้<input type="file" id="logoIn" accept="image/*" hidden/></label>' + (st.logo ? '<button class="btn dng" onclick="removeLogo()">ลบโลโก้</button>' : '') + '</div></div></div></div>' +
     '<div class="card" style="margin-top:14px">' + secHead('โลโก้หน่วยงาน', 'แสดงเฉพาะบนเอกสาร (พิมพ์/PDF/Word) ไม่แสดงในหน้าเว็บ — บนเอกสารจะแสดงโลโก้คู่: โลโก้หน่วยงาน + โลโก้ระบบ') +
@@ -1691,6 +1726,9 @@ PAGES.set = function () {
 PAGES.after_set = function () {
   const f = $('#logoIn'); if (f) f.addEventListener('change', () => { if (f.files[0]) uploadLogo(f.files[0]); f.value = ''; });
   const o = $('#orgLogoIn'); if (o) o.addEventListener('change', () => { if (o.files[0]) uploadLogo(o.files[0], 'orgLogo'); o.value = ''; });
+  const cl = $('#cvLogoIn'); if (cl) cl.addEventListener('change', () => { if (cl.files[0]) uploadLogo(cl.files[0], 'cvLogo'); cl.value = ''; });
+  const cb = $('#cvBgIn'); if (cb) cb.addEventListener('change', () => { if (cb.files[0]) uploadLogo(cb.files[0], 'cvBg'); cb.value = ''; });
+  if (curTab('set', 'gen') === 'cover') cvPreview();
   if (curTab('set', 'gen') === 'sec') pinsLoad();
   if (curTab('set', 'gen') === 'upd') updInit();
 };
@@ -1718,10 +1756,10 @@ async function uploadLogo(file, key) {
   if (file.size > 5 * 1024 * 1024) { toast('ไฟล์ใหญ่เกิน 5MB', 'er'); return; }
   if (!(await needAuth())) return;
   try {
-    const r = await resizeImage(file, 512); let url = r.dataUrl;
-    if (MODE === 'gas' && !SIM) { const rr = await gasCall('apiUpload', authStr(), JSON.stringify({ filename: (key === 'orgLogo' ? 'orglogo_' : 'logo_') + Date.now() + (r.type === 'image/jpeg' ? '.jpg' : r.type === 'image/svg+xml' ? '.svg' : '.png'), mimeType: r.type, data: r.dataUrl.split(',')[1] || '', section: 'logo' })); url = rr.url; }
-    else if (url.length > 45000) { toast('โหมดทดลองเก็บโลโก้ได้เฉพาะรูปขนาดเล็ก — ใช้รูปที่เล็กลง', 'er'); return; }
-    if (await saveSettings({ [key]: url })) { toast(key === 'orgLogo' ? 'อัปโหลดโลโก้หน่วยงานแล้ว' : 'อัปโหลดโลโก้แล้ว', 'ok'); render(); }
+    const r = await resizeImage(file, key === 'cvBg' ? 1240 : 512); let url = r.dataUrl;
+    if (MODE === 'gas' && !SIM) { const rr = await gasCall('apiUpload', authStr(), JSON.stringify({ filename: key.toLowerCase() + '_' + Date.now() + (r.type === 'image/jpeg' ? '.jpg' : r.type === 'image/svg+xml' ? '.svg' : '.png'), mimeType: r.type, data: r.dataUrl.split(',')[1] || '', section: 'logo' })); url = rr.url; }
+    else if (url.length > 45000) { toast('โหมดทดลองเก็บรูปได้เฉพาะขนาดเล็ก — ใช้รูปที่เล็กลง หรือเปิดผ่านลิงก์ Web app', 'er'); return; }
+    if (await saveSettings({ [key]: url })) { toast(key === 'orgLogo' ? 'อัปโหลดโลโก้หน่วยงานแล้ว' : key === 'cvLogo' ? 'อัปโหลดโลโก้ปกแล้ว' : key === 'cvBg' ? 'อัปโหลดพื้นหลังปกแล้ว' : 'อัปโหลดโลโก้แล้ว', 'ok'); render(); }
   } catch (e) { toast(e.message, 'er'); }
 }
 async function removeOrgLogo() { if (await saveSettings({ orgLogo: '' })) { toast('ลบโลโก้หน่วยงานแล้ว', 'ok'); render(); } }
@@ -1786,6 +1824,317 @@ async function updCopy(path, btn) {
   const start = () => { try { render(); } catch (e) { console.error(e); const b = document.createElement('div'); b.className = 'note bad'; b.textContent = 'เริ่มระบบไม่สำเร็จ: ' + e.message; document.body.appendChild(b); } };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();
+
+/* ===================== รายงาน: ปก + เนื้อหาสรุปข้อมูลทั้งระบบ ===================== */
+const COVER_URL = 'https://nonthaphathr.github.io/sisaket-edu-analytics/cover-bg.jpg';
+const COVER_DEF = {
+  cvTitle: 'รายงานผลสัมฤทธิ์ทางการเรียน', cvSub: 'ของโรงเรียนในสังกัดองค์การบริหารส่วนจังหวัดศรีสะเกษ', cvYear: '',
+  cvName: 'นางปิยะพันธ์ พิชญ์ประเสริฐ', cvPos: 'ตำแหน่ง ศึกษานิเทศก์ วิทยฐานะ ศึกษานิเทศก์เชี่ยวชาญ',
+  cvDept: 'กลุ่มงานนิเทศทางการศึกษา\nกองการศึกษา ศาสนาและวัฒนธรรม\nองค์การบริหารส่วนจังหวัดศรีสะเกษ', cvLogo: '', cvBg: ''
+};
+function coverCfg(o) { const st = getSettings(), c = {}; Object.keys(COVER_DEF).forEach(k => { c[k] = (st[k] != null && (st[k] !== '' || /^cv(Sub|Name|Pos|Dept)$/.test(k))) ? st[k] : COVER_DEF[k]; }); return Object.assign(c, o || {}); }
+
+/* ---------- วาดปกด้วย canvas (ใช้ได้ทั้งพิมพ์/PDF และ Word) ---------- */
+function loadI(src, cors) { return new Promise((res, rej) => { const im = new Image(); if (cors) im.crossOrigin = 'anonymous'; im.onload = () => res(im); im.onerror = () => rej(new Error('img')); im.src = src; }); }
+async function safeImg(url) {
+  if (!url) return null;
+  try { const im = await loadI(url, !/^data:/.test(url)); const c = document.createElement('canvas'); c.width = c.height = 2; c.getContext('2d').drawImage(im, 0, 0); c.toDataURL(); return im; } catch (e) { }
+  if (MODE === 'gas') { const m = String(url).match(/\/d\/([\w-]{10,})/) || String(url).match(/[?&]id=([\w-]{10,})/); if (m) { try { const r = await gasCall('apiImgData', m[1]); return await loadI('data:' + r.type + ';base64,' + r.data); } catch (e) { } } }
+  return null;
+}
+const _cv = { k: '', v: '' };
+async function renderCover(o) {
+  o = o || {}; const c = coverCfg(o), y = o.y || S.year || '';
+  const key = JSON.stringify([c, y, orgLogoSrc(), logoSrc()]); if (_cv.k === key) return _cv.v;
+  try { await Promise.all(['700 40px Kanit', '600 30px Kanit', '500 28px Sarabun', '700 28px Sarabun'].map(f => document.fonts.load(f, 'ก'))); } catch (e) { }
+  const W = 1240, H = 1754, K = W / 1054, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const g = cv.getContext('2d');
+  const bg = await safeImg(c.cvBg || COVER_URL);
+  if (bg) g.drawImage(bg, 0, 0, W, H); else { const gr = g.createLinearGradient(0, 0, W, H); gr.addColorStop(0, '#fff7ed'); gr.addColorStop(.5, '#ffffff'); gr.addColorStop(1, '#fed7aa'); g.fillStyle = gr; g.fillRect(0, 0, W, H); g.fillStyle = '#f97316'; g.fillRect(0, H - 90 * K, W, 90 * K); }
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  const fit = (s, size, weight, fam, maxW) => { let z = size; g.font = weight + ' ' + z * K + 'px ' + fam; while (g.measureText(s).width > maxW * K && z > size * .5) { z -= 1; g.font = weight + ' ' + z * K + 'px ' + fam; } return z; };
+  const tx = (s, x, yy, size, weight, color, maxW, fam, stroke) => { if (!s) return; fit(s, size, weight, fam || 'Kanit', maxW); if (stroke) { g.lineJoin = 'round'; g.lineWidth = stroke * K; g.strokeStyle = 'rgba(255,255,255,.95)'; g.strokeText(s, x * K, yy * K); } g.fillStyle = color; g.fillText(s, x * K, yy * K); };
+  const rr = (x, yy, w, h, r) => { x *= K; yy *= K; w *= K; h *= K; r *= K; g.beginPath(); g.moveTo(x + r, yy); g.arcTo(x + w, yy, x + w, yy + h, r); g.arcTo(x + w, yy + h, x, yy + h, r); g.arcTo(x, yy + h, x, yy, r); g.arcTo(x, yy, x + w, yy, r); g.closePath(); };
+  const ln = (x1, x2, yy, w) => { const gr = g.createLinearGradient(x1 * K, 0, x2 * K, 0); gr.addColorStop(0, 'rgba(249,115,22,0)'); gr.addColorStop(.5, 'rgba(234,88,12,1)'); gr.addColorStop(1, 'rgba(249,115,22,0)'); g.strokeStyle = gr; g.lineWidth = (w || 2.4) * K; g.beginPath(); g.moveTo(x1 * K, yy * K); g.lineTo(x2 * K, yy * K); g.stroke(); };
+  // โลโก้กลางวงกลม
+  const lg = await safeImg(c.cvLogo || orgLogoSrc() || logoSrc());
+  if (lg) { const box = 168 * K, sc = Math.min(box / lg.width, box / lg.height), w = lg.width * sc, h = lg.height * sc; g.save(); g.beginPath(); g.arc(527 * K, 145 * K, 98 * K, 0, 7); g.clip(); g.drawImage(lg, 527 * K - w / 2, 145 * K - h / 2, w, h); g.restore(); }
+  tx(c.cvTitle, 527, 322, 66, 700, '#0f1b3d', 925, 'Kanit', 7);
+  tx(c.cvSub, 527, 388, 34, 600, '#e0590f', 950, 'Kanit', 4);
+  ln(370, 684, 424, 2.2);
+  ln(125, 262, 481, 2.4); ln(790, 932, 481, 2.4);
+  const yr = c.cvYear || y; g.save(); rr(278, 442, 496, 80, 40); const pg = g.createLinearGradient(0, 442 * K, 0, 522 * K); pg.addColorStop(0, '#fb8c2c'); pg.addColorStop(1, '#ea580c'); g.shadowColor = 'rgba(234,88,12,.35)'; g.shadowBlur = 14 * K; g.shadowOffsetY = 5 * K; g.fillStyle = pg; g.fill(); g.restore();
+  tx('ปีการศึกษา ' + yr, 527, 483, 46, 700, '#ffffff', 440, 'Kanit');
+  tx(c.cvName, 527, 1224, 38, 700, '#0f1b3d', 820, 'Kanit', 5);
+  g.save(); rr(160, 1257, 734, 54, 27); g.fillStyle = 'rgba(253,227,196,.95)'; g.fill(); g.restore();
+  tx(c.cvPos, 527, 1285, 27, 600, '#3b2a1a', 700, 'Sarabun');
+  ln(258, 796, 1332, 2.2);
+  String(c.cvDept || '').split(/\n/).map(s => s.trim()).filter(Boolean).slice(0, 4).forEach((s, i) => tx(s, 527, 1360 + i * 39, 29, 500, '#111827', 760, 'Sarabun'));
+  const url = cv.toDataURL('image/jpeg', .92); _cv.k = key; _cv.v = url; return url;
+}
+
+/* ---------- เนื้อหารายงาน (สรุปข้อมูลทั้งระบบ) ---------- */
+const R = { y: null, sec: { exec: true, acad: true, onet: true, std: true, sch: true, imp: true, sug: true } };
+const RSEC = [['exec', 'บทสรุปผู้บริหาร'], ['acad', 'ผลสัมฤทธิ์ทางการเรียน'], ['onet', 'ผลการทดสอบ O-NET รายวิชา'], ['std', 'มาตรฐานการเรียนรู้ที่ต้องเร่งพัฒนา'], ['sch', 'สรุปรายโรงเรียน'], ['imp', 'การติดตามการพัฒนา'], ['sug', 'ข้อเสนอแนะ']];
+const RCOL = { g: '#15803d', y: '#b45309', r: '#b91c1c', n: '#6b7280' };
+const rc = (t, k) => '<span style="color:' + (RCOL[k] || RCOL.n) + ';font-weight:bold">' + t + '</span>';
+const rd = d => d == null ? '–' : rc(sgn(d), colorOf(d).k);
+const rlb = a => rc(a[0], a[1]);
+let _blk = [];
+function RT(head, rows, al) {
+  _blk.push({ t: 'table', head, rows, al: al || [] });
+  al = al || []; const a = i => ({ l: 'left', r: 'right', c: 'center' }[al[i] || 'l']);
+  return '<table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;width:100%;margin:6pt 0;border:1px solid #999"><thead><tr>' + head.map((h, i) => '<th style="background:#fde8e8;text-align:' + (al[i] === 'r' ? 'right' : al[i] === 'c' ? 'center' : 'left') + ';border:1px solid #999">' + h + '</th>').join('') + '</tr></thead><tbody>' +
+    (rows.length ? rows.map(r => '<tr>' + r.map((c, i) => '<td style="text-align:' + a(i) + ';border:1px solid #999">' + (c == null ? '' : c) + '</td>').join('') + '</tr>').join('') : '<tr><td colspan="' + head.length + '" style="text-align:center;color:#6b7280">ไม่มีข้อมูล</td></tr>') + '</tbody></table>';
+}
+function reportParts(y, o) {
+  o = o || R; _blk = []; const sec = k => !o.sec || o.sec[k] !== false, I = idx(), st = getSettings(), total = st.total;
+  const lvls = I.levels.filter(l => SUBJ_ORDER.some(cn => aggSubject(y, l, cn)));
+  let no = 0; const toc = [];
+  const H2 = (t) => { no++; toc.push(no + '. ' + t); _blk.push({ t: 'h2', x: no + '. ' + t }); return '<h2 data-ch="1" style="page-break-before:always;"font-family:Kanit,\'TH SarabunPSK\',sans-serif;color:#991b1b;font-size:17pt;margin:18pt 0 6pt;border-bottom:2px solid #f97316;padding-bottom:3pt;page-break-after:avoid">' + no + '. ' + t + '</h2>'; };
+  const H3 = t => _blk.push({ t: 'h3', x: t }) && '<h3 style="font-family:Kanit,\'TH SarabunPSK\',sans-serif;color:#7c2d12;font-size:14pt;margin:12pt 0 4pt;page-break-after:avoid">' + t + '</h3>';
+  const P = t => _blk.push({ t: 'p', x: t }) && '<p style="margin:4pt 0;line-height:1.45">' + t + '</p>';
+  const UL = a => _blk.push({ t: 'ul', x: a }) && '<ul style="margin:4pt 0 4pt 18pt;padding:0">' + a.map(x => '<li style="margin:2pt 0;line-height:1.45">' + x + '</li>').join('') + '</ul>';
+  const subm = submittedSchools(y).size;
+  const aa = acadAgg(acadRows(y)), gs = GROUPS.map(g => ({ g: g.k, a: groupAgg(y, g.k) })).filter(x => x.a);
+  const hi = gs.slice().sort((a, b) => b.a.mean - a.a.mean)[0], lo = gs.slice().sort((a, b) => a.a.mean - b.a.mean)[0];
+  let stu = sum(Object.values(col('schools')).map(s => +s.students || 0));
+  if (!stu) { const m = {}; acadRows(y).forEach(r => { m[r.s] = Math.max(m[r.s] || 0, r.st.n || 0); }); stu = sum(Object.values(m)); }
+  const L = {}; lvls.forEach(l => { const subs = SUBJ_ORDER.map(cn => aggSubject(y, l, cn)).filter(Boolean); L[l] = { subs, o: avg(subs.map(a => a.mean).filter(v => v != null)), n: avg(subs.map(a => a.nat).filter(v => v != null)) }; });
+  const band = st.band, imp = Object.values(col('improve'));
+  let out = '';
+  /* 1 บทสรุปผู้บริหาร */
+  if (sec('exec')) {
+    out += H2('บทสรุปผู้บริหาร');
+    const kp = [['โรงเรียนที่ส่งข้อมูล', subm + ' / ' + total + ' แห่ง (' + fmt(total ? subm / total * 100 : 0, 1) + '%)'], ['นักเรียนในระบบ', stu ? fmtI(stu) + ' คน' : '–']];
+    if (aa) kp.push(['ผลสัมฤทธิ์ทางการเรียนเฉลี่ย (เต็ม 4)', fmt(aa.mean) + ' • ผ่านเกณฑ์ ' + fmt(aa.pass, 1) + '% • ระดับ 3 ขึ้นไป ' + fmt(aa.p3, 1) + '%']);
+    lvls.forEach(l => { const d = L[l].o != null && L[l].n != null ? L[l].o - L[l].n : null; kp.push(['O-NET ชั้น ' + (LEVEL_NAME[l] || l) + ' (เฉลี่ยรายวิชา)', 'อบจ. ' + fmt(L[l].o) + ' • ประเทศ ' + fmt(L[l].n) + ' • ผลต่าง ' + rd(d)]); });
+    out += RT(['ตัวชี้วัด', 'ผล'], kp);
+    const f = [];
+    f.push('ปีการศึกษา ' + y + ' มีโรงเรียนส่งข้อมูลเข้าระบบ ' + subm + ' จากทั้งหมด ' + total + ' แห่ง');
+    if (aa) f.push('ผลสัมฤทธิ์ทางการเรียนเฉลี่ยทั้งสังกัด ' + fmt(aa.mean) + ' จาก 4 คะแนน' + (hi && lo && hi.g !== lo.g ? ' กลุ่มสาระที่สูงสุดคือ <b>' + esc(hi.g) + '</b> (' + fmt(hi.a.mean) + ') และต่ำสุดคือ <b>' + esc(lo.g) + '</b> (' + fmt(lo.a.mean) + ')' : ''));
+    lvls.forEach(l => {
+      const subs = L[l].subs.filter(a => a.diff != null); if (!subs.length) return;
+      const up = subs.filter(a => a.diff >= band).length, dn = subs.filter(a => a.diff <= -band).length, mid = subs.length - up - dn, so = subs.slice().sort((a, b) => a.diff - b.diff);
+      f.push('O-NET ชั้น ' + (LEVEL_NAME[l] || l) + ': สูงกว่าประเทศ ' + up + ' วิชา ใกล้เคียง ' + mid + ' วิชา ต่ำกว่า ' + dn + ' วิชา' + (so[0].diff < 0 ? ' วิชาที่ต่ำกว่าประเทศมากที่สุดคือ <b>' + SUBJ_NAME[so[0].cn] + '</b> (' + sgn(so[0].diff) + ')' : '') + (so[so.length - 1].diff > 0 ? ' วิชาที่สูงกว่าประเทศมากที่สุดคือ <b>' + SUBJ_NAME[so[so.length - 1].cn] + '</b> (' + sgn(so[so.length - 1].diff) + ')' : ''));
+    });
+    if (imp.length) f.push('มีรายการติดตามการพัฒนา ' + imp.length + ' รายการ เสร็จสิ้นแล้ว ' + imp.filter(r => r.status === 'เสร็จสิ้น').length + ' รายการ');
+    out += H3('ประเด็นสำคัญ') + UL(f);
+  }
+  /* 2 ผลสัมฤทธิ์ */
+  if (sec('acad')) {
+    out += H2('ผลสัมฤทธิ์ทางการเรียน');
+    if (!aa) out += P('ยังไม่มีข้อมูลผลการเรียนของปีการศึกษา ' + y);
+    else {
+      out += H3('รายกลุ่มสาระการเรียนรู้ ปีการศึกษา ' + y) + RT(['กลุ่มสาระ', 'โรงเรียน', 'ผู้เรียน (คน)', 'เฉลี่ย', 'ผ่านเกณฑ์ %', 'ระดับ 3+ %', 'ผลการวิเคราะห์'],
+        gs.map(x => [esc(x.g), x.a.schools, fmtI(x.a.n), fmt(x.a.mean), fmt(x.a.pass, 1), fmt(x.a.p3, 1), rlb(accLabel(x.a.mean))]), ['l', 'r', 'r', 'r', 'r', 'r', 'c']);
+      out += P('เกณฑ์แปลผล: ค่าเฉลี่ย ≥ ' + st.accHi + ' จุดแข็ง • ≥ ' + st.accMid + ' ควรพัฒนา • ต่ำกว่านั้นเร่งพัฒนา');
+      const yrs = I.years.map(yy => ({ y: yy, a: acadAgg(acadRows(yy)) })).filter(x => x.a);
+      if (yrs.length > 1) out += H3('แนวโน้มย้อนหลัง') + RT(['ปีการศึกษา', 'เฉลี่ย', 'ผ่านเกณฑ์ %', 'ระดับ 3+ %', 'ผู้เรียน (คน)'], yrs.map(x => [x.y, fmt(x.a.mean), fmt(x.a.pass, 1), fmt(x.a.p3, 1), fmtI(x.a.n)]), ['l', 'r', 'r', 'r', 'r']);
+    }
+  }
+  /* 3 O-NET */
+  if (sec('onet')) {
+    out += H2('ผลการทดสอบ O-NET รายวิชา');
+    if (!lvls.length) out += P('ยังไม่มีข้อมูล O-NET ของปีการศึกษา ' + y);
+    lvls.forEach(l => {
+      out += H3('ชั้น' + (LEVEL_NAME[l] || l) + ' ปีการศึกษา ' + y) + RT(['วิชา', 'โรงเรียน', 'ผู้สอบ (คน)', 'อบจ.', 'จังหวัด', 'ประเทศ', 'ผลต่าง', 'สูง/ใกล้/ต่ำ (รร.)', 'ผล'],
+        L[l].subs.map(a => [SUBJ_NAME[a.cn], a.schools, fmtI(a.n), fmt(a.mean), fmt(a.prov), fmt(a.nat), rd(a.diff), a.cnt.g + '/' + a.cnt.y + '/' + a.cnt.r, rc(colorOf(a.diff).t, colorOf(a.diff).k)]), ['l', 'r', 'r', 'r', 'r', 'r', 'r', 'c', 'c']);
+      const ys = yearsOf(l); if (ys.length > 1) out += RT(['ปี'].concat(SUBJ_ORDER.map(cn => SUBJ_NAME[cn])), ys.map(yy => [yy].concat(SUBJ_ORDER.map(cn => { const a = aggSubject(yy, l, cn); return a ? fmt(a.mean) + ' <small>(' + sgn(a.diff, 1) + ')</small>' : '–'; }))), ['l', 'r', 'r', 'r', 'r', 'r']) + P('ค่าในวงเล็บ = ผลต่างจากค่าเฉลี่ยประเทศ');
+    });
+  }
+  /* 4 มาตรฐาน */
+  if (sec('std')) {
+    out += H2('มาตรฐานการเรียนรู้ที่ต้องเร่งพัฒนา');
+    if (!lvls.length) out += P('ยังไม่มีข้อมูล O-NET');
+    lvls.forEach(l => { const u = []; SUBJ_ORDER.forEach(cn => stdAgg(y, l, cn).forEach(s => u.push(Object.assign({ cn }, s)))); u.sort((a, b) => a.diff - b.diff);
+      out += H3('ชั้น' + (LEVEL_NAME[l] || l) + ' — 10 มาตรฐานที่ต่ำกว่าประเทศมากที่สุด') + RT(['วิชา', 'มาตรฐาน', 'เฉลี่ย (%)', 'ประเทศ', 'ผลต่าง', 'รร.ต่ำกว่า', 'ผล'], u.filter(s => s.diff < 0).slice(0, 10).map(s => [SUBJ_NAME[s.cn], 'มาตรฐาน ' + s.k, fmt(s.m), fmt(s.nat), rd(s.diff), s.below + '/' + s.n, rlb(stdLabel(s.m))]), ['l', 'l', 'r', 'r', 'r', 'c', 'c']); });
+  }
+  /* 5 รายโรงเรียน */
+  if (sec('sch')) {
+    out += H2('สรุปรายโรงเรียน');
+    out += P('ผลต่างของคะแนนเฉลี่ย O-NET แต่ละวิชาเทียบค่าเฉลี่ยประเทศ (สีเขียว = สูงกว่า สีเหลือง = ใกล้เคียง สีแดง = ต่ำกว่า)');
+    if (!lvls.length) { const rows = I.schools.map(s => { const a = acadAgg(acadRows(y, { s: s.code })); return [esc(sName(s.code)), a ? fmt(a.mean) : '–', a ? fmt(a.pass, 1) : '–']; }); out += RT(['โรงเรียน', 'ผลสัมฤทธิ์เฉลี่ย', 'ผ่านเกณฑ์ %'], rows, ['l', 'r', 'r']); }
+    lvls.forEach(l => {
+      const rows = I.schools.map(s => { const p = schoolProfile(y, l, s.code), a = acadAgg(acadRows(y, { s: s.code })); if (!Object.keys(p.subj).length && !a) return null; return [esc(sName(s.code)), a ? fmt(a.mean) : '–'].concat(SUBJ_ORDER.map(cn => p.subj[cn] ? rd(p.subj[cn].diff) : '–')).concat([Object.keys(p.subj).length ? p.below + '' : '–']); }).filter(Boolean);
+      out += H3('ชั้น' + (LEVEL_NAME[l] || l)) + RT(['โรงเรียน', 'ผลการเรียน (0–4)'].concat(SUBJ_ORDER.map(cn => SUBJ_NAME[cn])).concat(['วิชาที่ต่ำกว่าประเทศ']), rows, ['l', 'r', 'r', 'r', 'r', 'r', 'r', 'c']);
+    });
+  }
+  /* 6 ติดตามพัฒนา */
+  if (sec('imp')) {
+    out += H2('การติดตามการพัฒนา');
+    if (!imp.length) out += P('ยังไม่มีรายการติดตามการพัฒนาในระบบ');
+    else {
+      out += RT(['สถานะ', 'จำนวนรายการ'], STATUS.map(k => [k, imp.filter(r => r.status === k).length]), ['l', 'r']);
+      const md = {}; imp.forEach(r => { const k = r.method === 'อื่น ๆ' && r.methodOther ? 'อื่น ๆ: ' + r.methodOther : (r.method || '–'); md[k] = (md[k] || 0) + 1; });
+      out += RT(['วิธีติดตาม/รูปแบบการพัฒนา', 'จำนวนรายการ'], Object.keys(md).map(k => [esc(k), md[k]]), ['l', 'r']);
+      out += H3('รายการติดตาม') + RT(['โรงเรียน', 'ประเด็นที่ต้องพัฒนา', 'แนวทางการพัฒนา', 'วิธี', 'สถานะ', 'ผลลัพธ์'], imp.slice().sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))).slice(0, 60).map(r => [r.s ? esc(sName(r.s)) : 'ทั้งสังกัด', esc(r.issue), esc(r.plan || ''), esc(r.method === 'อื่น ๆ' && r.methodOther ? r.methodOther : r.method || ''), esc(r.status || ''), esc(r.outcome || '')]));
+    }
+  }
+  /* 7 ข้อเสนอแนะ */
+  if (sec('sug')) {
+    out += H2('ข้อเสนอแนะ');
+    const s = [];
+    lvls.forEach(l => { const so = L[l].subs.filter(a => a.diff != null && a.diff < 0).sort((a, b) => a.diff - b.diff).slice(0, 2); if (so.length) s.push('ชั้น' + (LEVEL_NAME[l] || l) + ' ควรเร่งส่งเสริมวิชา <b>' + so.map(a => SUBJ_NAME[a.cn]).join(' และ ') + '</b> ซึ่งต่ำกว่าค่าเฉลี่ยประเทศ ด้วยการนิเทศ ติดตาม และพัฒนาครูผู้สอนอย่างต่อเนื่อง'); });
+    const wk = gs.filter(x => accLabel(x.a.mean)[1] !== 'g').sort((a, b) => a.a.mean - b.a.mean).slice(0, 3); if (wk.length) s.push('กลุ่มสาระที่ผลสัมฤทธิ์ทางการเรียนยังไม่ถึงเกณฑ์จุดเด่น ได้แก่ <b>' + wk.map(x => esc(x.g)).join(', ') + '</b> ควรวางแผนพัฒนาการจัดการเรียนรู้และเพิ่มการสอนซ่อมเสริม');
+    const lw = []; lvls.forEach(l => { const u = []; SUBJ_ORDER.forEach(cn => stdAgg(y, l, cn).forEach(x => u.push(Object.assign({ cn }, x)))); u.sort((a, b) => a.diff - b.diff); if (u[0] && u[0].diff < 0) lw.push(SUBJ_NAME[u[0].cn] + ' มาตรฐาน ' + u[0].k + ' (ชั้น' + (LEVEL_NAME[l] || l) + ')'); });
+    if (lw.length) s.push('นำมาตรฐานการเรียนรู้ที่ต่ำที่สุดไปเป็นประเด็นหลักของ PLC และการอบรมครู: ' + lw.join(', '));
+    if (subm < total) s.push('ยังมีโรงเรียนที่ยังไม่ส่งข้อมูลปีการศึกษา ' + y + ' อีก ' + (total - subm) + ' แห่ง ควรติดตามเพื่อให้ผลวิเคราะห์ครบทั้งสังกัด');
+    s.push('ติดตามผลการพัฒนาอย่างต่อเนื่องผ่านระบบ Improvement Tracking และเปรียบเทียบผลกับปีการศึกษาถัดไป');
+    out += UL(s);
+  }
+  const cr = creditLines().concat([st.title + ' v' + APP_VERSION]); _blk.push({ t: 'credit', x: cr });
+  out += '<hr style="margin-top:18pt"/><p style="text-align:center;font-size:11pt;color:#555">' + cr.map(esc).join('<br/>') + '</p>';
+  const bodyBlocks = _blk; _blk = [];
+  return { body: out, bodyBlocks, titles: toc, pre: prefaceHtml(y, o), preBlocks: prefaceBlocks(y, o) };
+}
+function prefaceBlocks(y, o) {
+  const st = getSettings(), c = coverCfg(), subm = submittedSchools(y).size, secs = RSEC.filter(s => !o.sec || o.sec[s[0]] !== false).map(s => s[1]).join(' ');
+  const P3 = ['รายงานฉบับนี้จัดทำขึ้นเพื่อสรุปผลสัมฤทธิ์ทางการเรียนและผลการทดสอบทางการศึกษาระดับชาติขั้นพื้นฐาน (O-NET) ของโรงเรียนในสังกัด' + st.org + ' ประจำปีการศึกษา ' + y + ' โดยรวบรวมข้อมูลจากโรงเรียนที่ส่งข้อมูลเข้าสู่ระบบ ' + subm + ' แห่ง จากทั้งหมด ' + st.total + ' แห่ง',
+    'เนื้อหาของรายงานประกอบด้วย ' + secs + ' ซึ่งวิเคราะห์เปรียบเทียบกับค่าเฉลี่ยระดับจังหวัดและระดับประเทศ เพื่อให้เห็นจุดแข็งและประเด็นที่ควรพัฒนาของแต่ละโรงเรียนและของทั้งสังกัด',
+    'ผู้จัดทำหวังเป็นอย่างยิ่งว่ารายงานฉบับนี้จะเป็นสารสนเทศที่เป็นประโยชน์แก่ผู้บริหารสถานศึกษา ครู และผู้เกี่ยวข้อง ในการวางแผนพัฒนาคุณภาพการศึกษาและยกระดับผลสัมฤทธิ์ของผู้เรียนอย่างต่อเนื่อง และขอขอบคุณผู้บริหาร ครู และบุคลากรของทุกโรงเรียนที่ให้ความร่วมมือในการจัดส่งข้อมูล'];
+  return [{ t: 'pre-h', x: 'คำนำ' }].concat(P3.map(x => ({ t: 'pp', x }))).concat([{ t: 'sig', x: [c.cvName, c.cvPos, new Date().toLocaleDateString('th-TH', { dateStyle: 'long' })].filter(Boolean) }]);
+}
+function prefaceHtml(y, o) {
+  return prefaceBlocks(y, o).map(b => b.t === 'pre-h' ? '<h1 style="text-align:center;font-family:Kanit,\'TH SarabunPSK\',sans-serif;font-size:22pt;color:#991b1b;margin:6pt 0 16pt">' + b.x + '</h1>' : b.t === 'pp' ? '<p style="text-indent:2cm;text-align:justify;line-height:1.7;margin:0 0 8pt">' + esc(b.x) + '</p>' : '<div style="text-align:center;margin:30pt 0 0 45%;line-height:1.6">' + b.x.map(esc).join('<br/>') + '</div>').join('');
+}
+function tocHtml(titles, nums) {
+  return '<h1 style="text-align:center;font-family:Kanit,\'TH SarabunPSK\',sans-serif;font-size:22pt;color:#991b1b;margin:6pt 0 16pt">สารบัญ</h1><div style="display:flex;justify-content:space-between;font-weight:bold;border-bottom:1px solid #999;padding-bottom:3pt;margin-bottom:6pt"><span>เรื่อง</span><span>หน้า</span></div>' +
+    [['คำนำ', 2], ['สารบัญ', 3]].map(x => [x[0], x[1]]).concat(titles.map((t, i) => [t, nums ? nums[i] : ''])).map((r, i) => '<div style="display:flex;align-items:flex-end;margin:5pt 0;line-height:1.5"><span>' + esc(r[0]) + '</span><span style="flex:1;border-bottom:1px dotted #555;margin:0 4px 5px"></span><span class="tp" data-i="' + (i - 2) + '">' + (r[1] === '' ? '' : r[1]) + '</span></div>').join('');
+}
+
+/* ---------- ประกอบเอกสาร: พิมพ์/PDF และ Word (.docx จริง) ---------- */
+const RFONT = '<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet"/>';
+function reportDoc(y, coverUrl) {
+  const P = reportParts(y);
+  return '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + esc(reportName(y)) + '</title>' + RFONT + '<style>@page cover{size:A4;margin:0}@page rbody{size:A4;margin:16mm 14mm}body{font-family:"Sarabun","TH SarabunPSK",Tahoma,sans-serif;font-size:11pt;color:#111827;margin:0}table{font-size:9.5pt;page-break-inside:auto}tr{page-break-inside:avoid}thead{display:table-header-group}small{font-size:80%}' +
+    '.cover{page:cover;width:210mm;height:297mm;overflow:hidden;page-break-after:always;break-after:page}.cover img{width:210mm;height:297mm;display:block}.rbody,.rpre,.rtoc{page:rbody;width:182mm}.rpre,.rtoc{height:262mm;page-break-after:always;break-after:page;overflow:hidden}.rbody>h2:first-child{page-break-before:auto!important}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body><div class="cover"><img src="' + coverUrl + '"/></div><div class="rpre">' + P.pre + '</div><div class="rtoc">' + tocHtml(P.titles, null) + '</div><div class="rbody">' + P.body + '</div></body></html>';
+}
+const reportName = y => safeName('รายงานผลสัมฤทธิ์_ปีการศึกษา' + y);
+const clr = s => String(s == null ? '' : s).replace(/ /g, ' ').replace(/‌/g, '').replace(/ {2,}/g, ' ');
+function htmlRuns(h, base, D) {
+  const d = new DOMParser().parseFromString('<body>' + h + '</body>', 'text/html'), runs = [];
+  (function walk(n, st) { n.childNodes.forEach(c => { if (c.nodeType === 3) { const t = clr(c.textContent.replace(/\s+/g, ' ')); if (t) runs.push(new D.TextRun(Object.assign({ text: t }, st, st.size ? { sizeComplexScript: st.size } : {}))); } else if (c.nodeType === 1) { const s = Object.assign({}, st), tg = c.tagName, sty = c.getAttribute('style') || ''; if (tg === 'B' || tg === 'STRONG' || /font-weight:\s*bold/.test(sty)) s.bold = true; const m = sty.match(/color:\s*#([0-9a-fA-F]{6})/); if (m) s.color = m[1].toUpperCase(); if (tg === 'SMALL') s.size = Math.round((st.size || 32) * .8); if (tg === 'BR') { runs.push(new D.TextRun({ break: 1 })); return; } walk(c, s); } }); })(d.body, base || {});
+  return runs;
+}
+async function addThaiCs(blob) {
+  const zip = await JSZip.loadAsync(blob), THAI = /[฀-๿]/;
+  for (const name of Object.keys(zip.files).filter(n => /^word\/(document|header\d*|footer\d*|footnotes|endnotes)\.xml$/.test(n))) {
+    let xml = await zip.file(name).async('string');
+    xml = xml.replace(/<w:r(?:\s[^>]*)?>[\s\S]*?<\/w:r>/g, r => {
+      if (!THAI.test(r.replace(/<[^>]+>/g, '')) || /<w:cs\b/.test(r)) return r;
+      const e = r.indexOf('</w:rPr>');
+      if (e < 0) { if (r.includes('<w:rPr/>')) return r.replace('<w:rPr/>', '<w:rPr><w:cs/></w:rPr>'); return r.replace(/^(<w:r(?:\s[^>]*)?>)/, '$1<w:rPr><w:cs/></w:rPr>'); }
+      const m = r.slice(0, e).match(/<w:(em|lang|eastAsianLayout|specVanish|oMath|rPrChange)\b/), at = m ? m.index : e;
+      return r.slice(0, at) + '<w:cs/>' + r.slice(at);
+    });
+    zip.file(name, xml);
+  }
+  return zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+}
+async function buildReportDocx(y, coverUrl) {
+  await loadScript('https://cdn.jsdelivr.net/npm/docx@9/dist/index.iife.js', () => !!window.docx);
+  await loadScript('https://cdn.jsdelivr.net/npm/jszip@3/dist/jszip.min.js', () => !!window.JSZip);
+  const D = window.docx, TH = 'TH SarabunPSK', PT = 16, A = D.AlignmentType;
+  const FONT = { ascii: TH, hAnsi: TH, cs: TH, eastAsia: TH }, LANG = { value: 'th-TH', eastAsia: 'th-TH', bidirectional: 'th-TH' };
+  const THR = { font: FONT, size: PT * 2, sizeComplexScript: PT * 2, language: LANG };
+  const pt = reportParts(y);
+  const R = (t, o) => new D.TextRun(Object.assign({ text: clr(t) }, o || {}, o && o.size ? { sizeComplexScript: o.size } : {}));
+  const para = (children, o) => new D.Paragraph(Object.assign({ children }, o || {}));
+  const kids = [], bd = { style: D.BorderStyle.SINGLE, size: 4, color: '999999' };
+  const mk = (blocks, out) => blocks.forEach(b => {
+    if (b.t === 'pre-h') out.push(para([R(b.x, { bold: true, size: 44, color: '991B1B' })], { alignment: A.CENTER, spacing: { after: 360 } }));
+    else if (b.t === 'pp') out.push(para([R(b.x)], { alignment: A.THAI_DISTRIBUTE, indent: { firstLine: 1134 }, spacing: { after: 160, line: 360 } }));
+    else if (b.t === 'sig') b.x.forEach((x, i) => out.push(para([R(x)], { alignment: A.CENTER, indent: { left: 4800 }, spacing: { before: i ? 0 : 600, line: 360 } })));
+    else if (b.t === 'h2') out.push(para([R(b.x)], { heading: D.HeadingLevel.HEADING_1, pageBreakBefore: true }));
+    else if (b.t === 'h3') out.push(para([R(b.x)], { heading: D.HeadingLevel.HEADING_2 }));
+    else if (b.t === 'p') out.push(para(htmlRuns(b.x, {}, D), { alignment: A.THAI_DISTRIBUTE, spacing: { after: 80, line: 320 } }));
+    else if (b.t === 'ul') b.x.forEach(x => out.push(para([R('•  ')].concat(htmlRuns(x, {}, D)), { indent: { left: 540, hanging: 270 }, spacing: { after: 40, line: 320 }, alignment: A.THAI_DISTRIBUTE })));
+    else if (b.t === 'credit') b.x.forEach((x, i) => out.push(para([R(x, { size: 22, color: '555555' })], { alignment: A.CENTER, spacing: { before: i ? 0 : 400 } })));
+    else if (b.t === 'table') {
+      const al = i => ({ l: A.LEFT, r: A.RIGHT, c: A.CENTER }[b.al[i] || 'l']), cell = (h, i, head) => new D.TableCell({ shading: head ? { type: D.ShadingType.CLEAR, fill: 'FDE8E8', color: 'auto' } : undefined, margins: { top: 40, bottom: 40, left: 80, right: 80 }, children: [para(htmlRuns(String(h == null ? '' : h), { size: 22, bold: !!head }, D), { alignment: head ? (b.al[i] === 'r' ? A.RIGHT : b.al[i] === 'c' ? A.CENTER : A.LEFT) : al(i), spacing: { after: 0 } })] });
+      out.push(new D.Table({ width: { size: 100, type: D.WidthType.PERCENTAGE }, borders: { top: bd, bottom: bd, left: bd, right: bd, insideHorizontal: bd, insideVertical: bd },
+        rows: [new D.TableRow({ tableHeader: true, cantSplit: true, children: b.head.map((h, i) => cell(h, i, true)) })].concat((b.rows.length ? b.rows : [[ 'ไม่มีข้อมูล' ]]).map(r => new D.TableRow({ cantSplit: true, children: r.map((c, i) => cell(c, i, false)) }))) }));
+      out.push(para([R('')], { spacing: { after: 60 } }));
+    }
+  });
+  const pre = [], body = [];
+  mk(pt.preBlocks, pre); mk(pt.bodyBlocks, body);
+  const HS = { run: Object.assign({}, THR) };
+  const doc = new D.Document({
+    features: { updateFields: true },
+    styles: {
+      default: { document: { run: THR, paragraph: { alignment: A.THAI_DISTRIBUTE, spacing: { before: 0, after: 0, line: 240 } } } },
+      paragraphStyles: [
+        { id: 'Heading1', name: 'Heading 1', basedOn: 'Normal', next: 'Normal', quickFormat: true, run: Object.assign({}, THR, { size: 40, sizeComplexScript: 40, bold: true, color: '991B1B' }), paragraph: { spacing: { before: 0, after: 200 }, outlineLevel: 0 } },
+        { id: 'Heading2', name: 'Heading 2', basedOn: 'Normal', next: 'Normal', quickFormat: true, run: Object.assign({}, THR, { size: 34, sizeComplexScript: 34, bold: true, color: '7C2D12' }), paragraph: { spacing: { before: 240, after: 100 }, outlineLevel: 1 } }]
+    },
+    sections: [
+      { properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 0, bottom: 0, left: 0, right: 0, header: 0, footer: 0 } } }, children: [para([new D.ImageRun({ type: 'jpg', data: Uint8Array.from(atob(coverUrl.split(',')[1]), c => c.charCodeAt(0)), transformation: { width: 793, height: 1120 } })], { spacing: { before: 0, after: 0 } })] },
+      { properties: { type: D.SectionType.NEXT_PAGE, page: { size: { width: 11906, height: 16838 }, margin: { top: 1440, bottom: 1134, left: 1701, right: 1134 } } },
+        footers: { default: new D.Footer({ children: [para([new D.TextRun({ children: [D.PageNumber.CURRENT], font: FONT, size: 32, sizeComplexScript: 32 })], { alignment: A.CENTER })] }) },
+        children: pre.concat([para([R('')], { pageBreakBefore: true })]).concat([para([R('สารบัญ', { bold: true, size: 44, color: '991B1B' })], { alignment: A.CENTER, spacing: { after: 300 } }), new D.TableOfContents('', { hyperlink: true, headingStyleRange: '1-1' })]).concat(body) }
+    ]
+  });
+  const blob = await D.Packer.toBlob(doc);
+  return addThaiCs(blob);
+}
+async function reportWord() {
+  const y = R.y; dlRun('กำลังสร้างรายงาน Word (.docx)…', reportName(y) + '.docx');
+  try { const cu = await renderCover({ y }), blob = await buildReportDocx(y, cu); downloadBlob(reportName(y) + '.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', blob); toast('เปิดไฟล์ใน Word แล้วกด "ใช่/Update" เพื่ออัปเดตเลขหน้าสารบัญ', 'ok'); }
+  catch (e) { dlHide(); toast('สร้างรายงานไม่สำเร็จ: ' + e.message, 'er'); }
+}
+async function reportPrint() {
+  const y = R.y; dlRun('กำลังเตรียมรายงานสำหรับพิมพ์/PDF…', reportName(y));
+  try {
+    const cu = await renderCover({ y }), html = reportDoc(y, cu), f = document.createElement('iframe'); f.style.cssText = 'position:fixed;left:0;top:0;width:210mm;height:297mm;opacity:0;pointer-events:none;border:0;z-index:-1'; document.body.appendChild(f);
+    const d = f.contentWindow.document; d.open(); d.write(html); d.close(); const t0 = document.title; document.title = reportName(y);
+    const go = () => {
+      try { const hs = [...d.querySelectorAll('h2[data-ch]')], rb = d.querySelector('.rbody'), H = 262 * 96 / 25.4 * .95, ps = []; let pg = 4;
+        hs.forEach((h, i) => { ps.push(pg); const end = i + 1 < hs.length ? hs[i + 1].getBoundingClientRect().top : rb.getBoundingClientRect().bottom; pg += Math.max(1, Math.ceil((end - h.getBoundingClientRect().top) / H)); });
+        d.querySelectorAll('.tp').forEach(e => { const i = +e.dataset.i; if (i >= 0 && ps[i]) e.textContent = ps[i]; else if (i === -2) e.textContent = 2; else if (i === -1) e.textContent = 3; }); } catch (e) { }
+      dlHide(); try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) { } setTimeout(() => { document.title = t0; f.remove(); }, 2000);
+    };
+    const im = d.querySelector('img'); const ready = () => (d.fonts && d.fonts.ready ? Promise.race([d.fonts.ready, new Promise(r => setTimeout(r, 2500))]) : Promise.resolve()).then(go);
+    if (im && !im.complete) im.onload = ready; else setTimeout(ready, 200);
+  } catch (e) { dlHide(); toast('สร้างรายงานไม่สำเร็จ: ' + e.message, 'er'); }
+}
+
+/* ---------- หน้า "ส่งออกเอกสารรายงาน" ---------- */
+function rptY(v) { R.y = +v; render(); }
+function rptSec(k, on) { R.sec[k] = on; render(); }
+PAGES.report = function () {
+  const I = idx(); if (!I.years.length) return noData();
+  if (!R.y || !I.years.includes(+R.y)) R.y = S.year || latestYear();
+  return '<div class="stack"><div class="hero"><h2>ส่งออกเอกสารรายงาน</h2><p>รายงานสรุปข้อมูลทั้งระบบ พร้อมปก — พิมพ์/บันทึก PDF หรือดาวน์โหลด Word</p></div>' +
+    '<div class="grid g2" style="align-items:start"><div class="card">' + secHead('ปกรายงาน', 'แก้ไขข้อความและโลโก้ได้ที่ ตั้งค่า › ปกรายงาน') +
+    '<div class="rpcov"><img id="rpCover" alt="ปกรายงาน"/><div class="rpsk" id="rpSk">กำลังสร้างปก…</div></div>' +
+    '<div class="row" style="margin-top:10px"><button class="btn" onclick="go(\'set\',\'cover\')">✏️ ตั้งค่าปก</button></div></div>' +
+    '<div class="card">' + secHead('ตัวเลือกรายงาน') + '<label class="f">ปีการศึกษา</label>' + sel('rpY', yearOpts(), R.y, 'rptY') +
+    '<label class="f" style="margin-top:12px">เนื้อหาที่ต้องการ</label><div class="rpsec">' + RSEC.map(s => '<label class="chk"><input type="checkbox" ' + (R.sec[s[0]] !== false ? 'checked ' : '') + 'onchange="rptSec(\'' + s[0] + '\',this.checked)"/> ' + s[1] + '</label>').join('') + '</div>' +
+    '<div class="row" style="margin-top:14px;gap:8px"><button class="btn pri glow" onclick="reportPrint()">🖨 พิมพ์ / บันทึก PDF</button><button class="btn" onclick="reportWord()">📄 ดาวน์โหลด Word</button></div>' +
+    '<div class="note info small" style="margin-top:10px">ปก + เนื้อหาสรุปจากข้อมูลทั้งสังกัดตามปีที่เลือก • ชื่อไฟล์: ' + esc(reportName(R.y)) + '</div></div></div>' +
+    '<div class="card"><div class="sub" style="margin-bottom:8px">ตัวอย่างเนื้อหา</div><div class="rptprev">' + (function(){ const p = reportParts(+R.y); return p.pre + tocHtml(p.titles, null) + p.body; })() + '</div></div></div>';
+};
+PAGES.after_report = function () { renderCover({ y: R.y }).then(u => { const i = $('#rpCover'); if (i) { i.src = u; const k = $('#rpSk'); if (k) k.remove(); } }).catch(e => { const k = $('#rpSk'); if (k) k.textContent = 'สร้างปกไม่สำเร็จ: ' + e.message; }); };
+
+/* ---------- ตั้งค่าปก ---------- */
+function coverSettingsHtml() {
+  const c = coverCfg(), st = getSettings(), F = (k, l, ty) => '<div><label class="f">' + l + '</label><input type="' + (ty || 'text') + '" id="cv_' + k + '" value="' + esc(c[k]) + '" oninput="cvPrevDeb()" style="width:100%"/></div>';
+  return '<div class="grid g2" style="align-items:start"><div class="stack"><div class="card">' + secHead('ข้อความบนปก', 'ปีการศึกษาเว้นว่างไว้ = ใช้ปีที่เลือกตอนส่งออก') +
+    '<div class="stack" style="gap:10px">' + F('cvTitle', 'ชื่อรายงาน (บรรทัดใหญ่)') + F('cvSub', 'ชื่อรองสีส้ม') + F('cvYear', 'ปีการศึกษา (พ.ศ.) — เว้นว่างเพื่อใช้ปีที่เลือกอัตโนมัติ') + F('cvName', 'ชื่อผู้จัดทำ') + F('cvPos', 'ตำแหน่ง/วิทยฐานะ (ในแถบสีครีม)') +
+    '<div><label class="f">หน่วยงาน (สูงสุด 4 บรรทัด)</label><textarea id="cv_cvDept" rows="4" oninput="cvPrevDeb()" style="width:100%">' + esc(c.cvDept) + '</textarea></div></div>' +
+    '<div class="row" style="justify-content:space-between;margin-top:12px"><button class="btn" onclick="cvReset()">↺ คืนค่าเริ่มต้น</button><button class="btn pri" onclick="cvSave()">💾 บันทึกปก</button></div></div>' +
+    '<div class="card">' + secHead('โลโก้บนปก', 'วงกลมกลางด้านบน — ถ้าไม่ตั้ง จะใช้โลโก้หน่วยงาน หรือโลโก้ระบบ') + '<div class="row" style="gap:16px"><div style="width:96px;height:96px;border:1px solid var(--line);border-radius:50%;display:grid;place-items:center;background:#fff;overflow:hidden">' + (st.cvLogo ? '<img src="' + esc(st.cvLogo) + '" style="max-width:80px;max-height:80px"/>' : '<span class="muted small">อัตโนมัติ</span>') + '</div><div class="grow"><label class="btn pri" style="cursor:pointer">📂 เลือกโลโก้ปก<input type="file" id="cvLogoIn" accept="image/*" hidden/></label> ' + (st.cvLogo ? '<button class="btn" onclick="cvClear(\'cvLogo\')">ลบ</button>' : '') + '</div></div></div>' +
+    '<div class="card">' + secHead('ภาพพื้นหลังปก', 'ค่าเริ่มต้นคือภาพโรงเรียน-นักเรียนสีส้ม (A4 แนวตั้ง สัดส่วน 1054×1492) — อัปโหลดภาพของท่านเองเพื่อเปลี่ยนได้') + '<div class="row"><label class="btn" style="cursor:pointer">🖼 อัปโหลดพื้นหลังใหม่<input type="file" id="cvBgIn" accept="image/*" hidden/></label> ' + (st.cvBg ? '<button class="btn" onclick="cvClear(\'cvBg\')">ใช้ภาพเริ่มต้น</button>' : '<span class="muted small">กำลังใช้ภาพเริ่มต้น</span>') + '</div></div></div>' +
+    '<div class="card"><div class="sub" style="margin-bottom:8px">ตัวอย่างปก</div><div class="rpcov"><img id="cvPrev" alt="ตัวอย่างปก"/><div class="rpsk" id="cvSk">กำลังสร้างปก…</div></div></div></div>';
+}
+function cvVals() { const o = {}; Object.keys(COVER_DEF).forEach(k => { const e = $('#cv_' + k); if (e) o[k] = e.value; }); return o; }
+let _cvT = null;
+function cvPrevDeb() { clearTimeout(_cvT); _cvT = setTimeout(cvPreview, 350); }
+async function cvPreview() { try { const u = await renderCover(Object.assign(cvVals(), { y: cvVals().cvYear || S.year })); const i = $('#cvPrev'); if (i) { i.src = u; const k = $('#cvSk'); if (k) k.remove(); } } catch (e) { const k = $('#cvSk'); if (k) k.textContent = 'สร้างตัวอย่างไม่สำเร็จ'; } }
+async function cvSave() { const v = cvVals(); delete v.cvLogo; delete v.cvBg; if (await saveSettings(v)) { toast('บันทึกปกรายงานแล้ว', 'ok'); render(); } }
+async function cvReset() { if (!(await ask('คืนข้อความบนปกเป็นค่าเริ่มต้น?', { title: 'คืนค่าเริ่มต้น', ok: 'คืนค่า' }))) return; const p = {}; Object.keys(COVER_DEF).forEach(k => { if (k !== 'cvLogo' && k !== 'cvBg') p[k] = COVER_DEF[k]; }); if (await saveSettings(p)) { toast('คืนค่าเริ่มต้นแล้ว', 'ok'); render(); } }
+async function cvClear(k) { if (await saveSettings({ [k]: '' })) { toast('ลบแล้ว', 'ok'); render(); } }
 
 </script>
 <div id="appEndOfFile" hidden></div>
